@@ -36,14 +36,11 @@
 
   /* Home header */
   .topbar { display: flex; align-items: center; gap: 10px; padding: 18px 16px 12px; }
-  .icon-btn { width: 38px; height: 38px; border-radius: 10px; background: #fff; border: 0.5px solid #B5D4F4; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
-  .topbar .title { margin: 0; font-size: 16px; font-weight: 700; }
-  .topbar .count { margin: 0; font-size: 11px; color: #185FA5; }
-  .topbar .spacer { flex: 1; }
+  .icon-btn { width: 42px; height: 42px; border-radius: 10px; background: #fff; border: 0.5px solid #B5D4F4; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
 
-  .search-wrap { padding: 0 16px 12px; position: relative; }
-  .search-wrap svg { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); }
-  #search { width: 100%; height: 42px; padding-left: 38px; padding-right: 12px; border-radius: 21px; border: 0.5px solid #B5D4F4; background: #fff; font-size: 15px; outline: none; }
+  .search-wrap { flex: 1; display: flex; align-items: center; background: #fff; border-radius: 21px; border: 0.5px solid #B5D4F4; height: 42px; padding: 0 14px; gap: 8px; }
+  .search-wrap svg { flex-shrink: 0; }
+  #search { flex: 1; height: 100%; border: none; background: transparent; font-size: 15px; outline: none; padding: 0; }
 
   #list { background: #fff; border-radius: 18px 18px 0 0; padding: 4px 8px; flex: 1; min-height: 60vh; }
   .item-row { padding: 13px 8px; border-bottom: 0.5px solid #eee; display: flex; align-items: flex-start; gap: 8px; }
@@ -130,16 +127,13 @@
     <button class="icon-btn" id="menuBtn" aria-label="開啟分類選單">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
     </button>
-    <div>
-      <p class="title" id="pageTitle">全部藥品</p>
-      <p class="count" id="pageCount"></p>
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search" type="text" placeholder="搜尋藥名、藥品碼">
     </div>
-    <div class="spacer"></div>
   </div>
-  <div class="search-wrap">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input id="search" type="text" placeholder="搜尋藥名、藥品碼">
-  </div>
+  <p id="pageTitle" style="display:none;"></p>
+  <p id="pageCount" style="display:none;"></p>
   <div id="list"></div>
   <button class="fab" id="addBtn" aria-label="新增藥品">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
