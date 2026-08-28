@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="找不到藥">
+<meta name="theme-color" content="#EFF6FC">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>找不到藥</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; font-family: 'Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;
+    background: #EFF6FC; color: #042C53; overscroll-behavior: none;
+  }
+  .screen { min-height: 100vh; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+  button { font-family: inherit; cursor: pointer; }
+  input { font-family: inherit; }
+
+  /* Login */
+  #loginScreen { align-items: center; padding: 64px 28px 32px; }
+  .logo { margin-bottom: 20px; }
+  .title-cn { font-size: 34px; font-weight: 700; letter-spacing: 1px; margin: 0 0 8px; }
+  .title-en { font-size: 12px; color: #185FA5; letter-spacing: 3px; margin: 0 0 44px; }
+  .login-card { width: 100%; max-width: 320px; background: rgba(255,255,255,0.75); border-radius: 16px; padding: 4px 18px; }
+  .login-row { display: flex; align-items: center; height: 52px; gap: 12px; }
+  .login-row span { font-size: 14px; color: #85B7EB; font-weight: 500; width: 32px; flex-shrink: 0; }
+  .login-row input { flex: 1; height: 100%; border: none; background: transparent; font-size: 16px; outline: none; }
+  .btn-primary { width: 100%; max-width: 320px; height: 48px; border-radius: 24px; background: #B5D4F4; color: #0C447C; border: none; font-size: 16px; font-weight: 700; margin-top: 22px; }
+  .err { margin-top: 10px; font-size: 12px; color: #A32D2D; min-height: 16px; }
+
+  /* Home header */
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 18px 16px 12px; }
+  .icon-btn { width: 38px; height: 38px; border-radius: 10px; background: #fff; border: 0.5px solid #B5D4F4; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
+  .topbar .title { margin: 0; font-size: 16px; font-weight: 700; }
+  .topbar .count { margin: 0; font-size: 11px; color: #185FA5; }
+  .topbar .spacer { flex: 1; }
+
+  .search-wrap { padding: 0 16px 12px; position: relative; }
+  .search-wrap svg { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); }
+  #search { width: 100%; height: 42px; padding-left: 38px; padding-right: 12px; border-radius: 21px; border: 0.5px solid #B5D4F4; background: #fff; font-size: 15px; outline: none; }
+
+  #list { background: #fff; border-radius: 18px 18px 0 0; padding: 4px 8px; flex: 1; min-height: 60vh; }
+  .item-row { padding: 13px 8px; border-bottom: 0.5px solid #eee; display: flex; align-items: flex-start; gap: 8px; }
+  .item-row .name { margin: 0 0 6px; font-size: 15px; font-weight: 700; line-height: 1.4; }
+  .tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: 12px; padding: 3px 9px; border-radius: 8px; }
+  .tag-code { background: #E6F1FB; color: #0C447C; font-weight: 700; }
+  .tag-loc { background: #F1EFE8; color: #5F5E5A; }
+  .tag-warn { background: #FCEBEB; color: #791F1F; }
+  .tag-ctrl { background: #FAEEDA; color: #633806; }
+  .tag-abx { background: #E6F1FB; color: #0C447C; }
+  .tag-pain { background: #FBEAF0; color: #72243E; }
+  .empty-msg { text-align: center; color: #999; font-size: 13px; padding: 40px 0; }
+
+  .fab { position: fixed; right: 20px; bottom: 24px; width: 52px; height: 52px; border-radius: 26px; background: #0C447C; color: #fff; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(12,68,124,0.35); z-index: 6; }
+
+  /* Drawer */
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 8; }
+  #drawer { display: none; position: fixed; top: 0; left: 0; bottom: 0; width: 250px; background: #fff; z-index: 9; box-shadow: 2px 0 16px rgba(0,0,0,0.15); padding: 20px 0; overflow-y: auto; }
+  #drawer .drawer-head { padding: 0 18px 16px; }
+  #drawer .drawer-head p { margin: 0; font-size: 12px; color: #999; font-weight: 500; }
+  .cat-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: transparent; border: none; text-align: left; }
+  .cat-row.active { background: #E6F1FB; }
+  .cat-row .label { flex: 1; font-size: 14px; }
+  .cat-row .n { font-size: 12px; color: #999; }
+
+  /* Detail */
+  #detailScreen { background: #fff; }
+  .detail-top { display: flex; align-items: center; gap: 10px; padding: 16px; border-bottom: 0.5px solid #eee; }
+  .detail-body { padding: 20px 18px; flex: 1; }
+  .field { margin-bottom: 22px; }
+  .field label { display: block; font-size: 12px; color: #999; margin-bottom: 6px; }
+  .field .value { font-size: 17px; font-weight: 700; line-height: 1.5; }
+  .field input, .field textarea { width: 100%; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 0.5px solid #ccc; outline: none; font-family: inherit; }
+  .field textarea { resize: vertical; min-height: 44px; }
+  .detail-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-outline { flex: 1; height: 44px; border-radius: 22px; background: #fff; border: 0.5px solid #999; font-size: 14px; }
+  .btn-save { flex: 1; height: 44px; border-radius: 22px; background: #0C447C; color: #fff; border: none; font-size: 14px; font-weight: 700; }
+  .btn-danger { color: #A32D2D; border-color: #A32D2D; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="screen active">
+  <svg class="logo" width="76" height="76" viewBox="0 0 68 68">
+    <rect x="4" y="4" width="60" height="60" rx="16" fill="#FBFDFF"/>
+    <g transform="translate(30,30) rotate(-35)">
+      <rect x="-19" y="-6.5" width="38" height="13" rx="6.5" fill="#85B7EB"/>
+      <rect x="-19" y="-6.5" width="19" height="13" rx="6.5" fill="#0C447C"/>
+      <rect x="-9" y="-6.5" width="9" height="13" fill="#0C447C"/>
+      <path d="M 0 -6.5 L 0 6.5" stroke="#FBFDFF" stroke-width="1.5"/>
+    </g>
+    <g transform="translate(46,46)">
+      <circle r="10" fill="#FBFDFF" stroke="#0C447C" stroke-width="2.2"/>
+      <line x1="7" y1="7" x2="13" y2="13" stroke="#0C447C" stroke-width="2.4" stroke-linecap="round"/>
+    </g>
+  </svg>
+  <p class="title-cn">找不到藥</p>
+  <p class="title-en">FIND MEDICINE</p>
+  <div class="login-card">
+    <div class="login-row">
+      <span>ID</span>
+      <input id="empId" type="text" placeholder="員工代號" autocomplete="off">
+    </div>
+  </div>
+  <button class="btn-primary" id="loginBtn">登入</button>
+  <p class="err" id="loginErr"></p>
+</div>
+
+<div id="homeScreen" class="screen">
+  <div class="topbar">
+    <button class="icon-btn" id="menuBtn" aria-label="開啟分類選單">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+    </button>
+    <div>
+      <p class="title" id="pageTitle">全部藥品</p>
+      <p class="count" id="pageCount"></p>
+    </div>
+    <div class="spacer"></div>
+  </div>
+  <div class="search-wrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="search" type="text" placeholder="搜尋藥名、藥品碼">
+  </div>
+  <div id="list"></div>
+  <button class="fab" id="addBtn" aria-label="新增藥品">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+</div>
+
+<div id="detailScreen" class="screen">
+  <div class="detail-top">
+    <button class="icon-btn" id="backBtn" aria-label="返回">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0C447C" stroke-width="2.2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="editBtn" aria-label="編輯">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0C447C" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    </button>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<div id="overlay"></div>
+<div id="drawer">
+  <div class="drawer-head"><p>依調劑檯面篩選</p></div>
+  <div id="cats"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+let workingData = JSON.parse(JSON.stringify(MED_DATA));
+try {
+  const saved = localStorage.getItem('med_data_override');
+  if (saved) workingData = JSON.parse(saved);
+} catch(e) {}
+
+const CATS = [
+  { name: '全部藥品', filter: null },
+  { name: '調劑檯', filter: '調劑檯' },
+  { name: '專調檯', filter: '專調檯' },
+  { name: '兒科檯', filter: '兒科檯' },
+  { name: '急診檯', filter: '急診檯' }
+];
+const TAG_CLASS = { '高警訊': 'tag-warn', '四級管藥': 'tag-ctrl', '抗生素區': 'tag-abx', '止痛區': 'tag-pain', '一般藥品區': 'tag-loc' };
+
+let activeCat = null;
+let activeCode = null;
+let editing = false;
+
+function saveData() {
+  try { localStorage.setItem('med_data_override', JSON.stringify(workingData)); } catch(e) {}
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ---- Login ----
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const id = document.getElementById('empId').value.trim();
+  const err = document.getElementById('loginErr');
+  if (!id) { err.textContent = '請先輸入員工代號'; return; }
+  err.textContent = '';
+  try { localStorage.setItem('emp_id', id); } catch(e) {}
+  showScreen('homeScreen');
+  renderCats();
+  renderList();
+});
+
+(function autoLogin() {
+  try {
+    const saved = localStorage.getItem('emp_id');
+    if (saved) document.getElementById('empId').value = saved;
+  } catch(e) {}
+})();
+
+// ---- Home / list ----
+function count(filter) {
+  return filter ? workingData.filter(d => d.cat === filter).length : workingData.length;
+}
+function currentList() {
+  const base = activeCat ? workingData.filter(d => d.cat === activeCat) : workingData;
+  const q = (document.getElementById('search').value || '').trim().toLowerCase();
+  if (!q) return base;
+  return base.filter(d => d.name.toLowerCase().includes(q) || (d.loc||'').toLowerCase().includes(q) || d.code.toLowerCase().includes(q));
+}
+function renderList() {
+  const items = currentList();
+  document.getElementById('pageTitle').textContent = activeCat || '全部藥品';
+  document.getElementById('pageCount').textContent = '共 ' + items.length + ' 項';
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  if (items.length === 0) {
+    list.innerHTML = '<p class="empty-msg">尚無資料，可點右下角＋新增</p>';
+    return;
+  }
+  items.forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    const tagHtml = d.tag ? `<span class="tag ${TAG_CLASS[d.tag]||'tag-loc'}">${d.tag}</span>` : '';
+    row.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <p class="name">${d.name}</p>
+        <div class="tags">
+          <span class="tag tag-code">${d.code}</span>
+          <span class="tag tag-loc">${d.loc||'（未設定位置）'}</span>
+          ${tagHtml}
+        </div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:4px;"><polyline points="9 18 15 12 9 6"/></svg>
+    `;
+    row.addEventListener('click', () => openDetail(d.code));
+    list.appendChild(row);
+  });
+}
+document.getElementById('search').addEventListener('input', renderList);
+
+function renderCats() {
+  const box = document.getElementById('cats');
+  box.innerHTML = '';
+  CATS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-row' + (activeCat === c.filter ? ' active' : '');
+    btn.innerHTML = `<span class="label">${c.name}</span><span class="n">${count(c.filter)}</span>`;
+    btn.addEventListener('click', () => {
+      activeCat = c.filter;
+      renderCats();
+      renderList();
+      closeDrawer();
+    });
+    box.appendChild(btn);
+  });
+}
+function openDrawer() { document.getElementById('drawer').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; }
+function closeDrawer() { document.getElementById('drawer').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; }
+document.getElementById('menuBtn').addEventListener('click', openDrawer);
+document.getElementById('overlay').addEventListener('click', closeDrawer);
+
+// ---- Detail ----
+function findItem(code) { return workingData.find(d => d.code === code); }
+
+function openDetail(code) {
+  activeCode = code;
+  editing = false;
+  renderDetail();
+  showScreen('detailScreen');
+}
+
+function openNew() {
+  const newItem = { code: '', cat: activeCat || '調劑檯', name: '', loc: '', tag: null, _isNew: true };
+  workingData.unshift(newItem);
+  activeCode = '__new__' + Date.now();
+  newItem.code = activeCode;
+  editing = true;
+  renderDetail();
+  showScreen('detailScreen');
+}
+document.getElementById('addBtn').addEventListener('click', openNew);
+
+document.getElementById('backBtn').addEventListener('click', () => {
+  const item = findItem(activeCode);
+  if (item && item._isNew && !item.name) {
+    workingData = workingData.filter(d => d !== item);
+  }
+  showScreen('homeScreen');
+  renderCats();
+  renderList();
+});
+
+document.getElementById('editBtn').addEventListener('click', () => {
+  editing = !editing;
+  renderDetail();
+});
+
+function renderDetail() {
+  const item = findItem(activeCode);
+  const body = document.getElementById('detailBody');
+  if (!item) { body.innerHTML = ''; return; }
+
+  if (!editing) {
+    const tagHtml = item.tag ? `<span class="tag ${TAG_CLASS[item.tag]||'tag-loc'}" style="margin-top:6px;display:inline-block;">${item.tag}</span>` : '';
+    body.innerHTML = `
+      <div class="field"><label>藥名</label><div class="value">${item.name || '（未填寫）'}</div></div>
+      <div class="field"><label>藥品碼</label><div class="value">${item.code.startsWith('__new__') ? '（尚未設定）' : item.code}</div></div>
+      <div class="field"><label>分類</label><div class="value">${item.cat}</div></div>
+      <div class="field"><label>位置</label><div class="value">${item.loc || '（未填寫）'}</div>${tagHtml}</div>
+    `;
+  } else {
+    const codeVal = item.code.startsWith('__new__') ? '' : item.code;
+    body.innerHTML = `
+      <div class="field"><label>藥名</label><input id="f_name" value="${(item.name||'').replace(/"/g,'&quot;')}" placeholder="輸入完整藥名"></div>
+      <div class="field"><label>藥品碼</label><input id="f_code" value="${codeVal}" placeholder="例如 GXA1"></div>
+      <div class="field"><label>分類</label>
+        <select id="f_cat" style="width:100%;height:42px;border-radius:10px;border:0.5px solid #ccc;font-size:16px;">
+          ${CATS.filter(c=>c.filter).map(c => `<option value="${c.filter}" ${item.cat===c.filter?'selected':''}>${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>位置</label><input id="f_loc" value="${(item.loc||'').replace(/"/g,'&quot;')}" placeholder="例如 ZCA右2"></div>
+      <div class="field"><label>備註標籤</label>
+        <select id="f_tag" style="width:100%;height:42px;border-radius:10px;border:0.5px solid #ccc;font-size:16px;">
+          <option value="">無</option>
+          ${Object.keys(TAG_CLASS).map(t => `<option value="${t}" ${item.tag===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="detail-actions">
+        <button class="btn-outline btn-danger" id="deleteBtn">刪除</button>
+        <button class="btn-save" id="saveBtn">儲存</button>
+      </div>
+    `;
+    document.getElementById('saveBtn').addEventListener('click', saveDetail);
+    document.getElementById('deleteBtn').addEventListener('click', deleteDetail);
+  }
+}
+
+function saveDetail() {
+  const item = findItem(activeCode);
+  const name = document.getElementById('f_name').value.trim();
+  const code = document.getElementById('f_code').value.trim();
+  if (!name || !code) { alert('藥名跟藥品碼是必填的喔'); return; }
+  item.name = name;
+  item.code = code;
+  item.cat = document.getElementById('f_cat').value;
+  item.loc = document.getElementById('f_loc').value.trim();
+  item.tag = document.getElementById('f_tag').value || null;
+  delete item._isNew;
+  activeCode = code;
+  editing = false;
+  saveData();
+  renderDetail();
+  renderCats();
+}
+
+function deleteDetail() {
+  if (!confirm('確定要刪除這筆藥品資料嗎？')) return;
+  workingData = workingData.filter(d => d.code !== activeCode);
+  saveData();
+  showScreen('homeScreen');
+  renderCats();
+  renderList();
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
