@@ -83,6 +83,12 @@
   .btn-outline { flex: 1; height: 44px; border-radius: 22px; background: #fff; border: 0.5px solid #999; font-size: 14px; }
   .btn-save { flex: 1; height: 44px; border-radius: 22px; background: #0C447C; color: #fff; border: none; font-size: 14px; font-weight: 700; }
   .btn-danger { color: #A32D2D; border-color: #A32D2D; }
+
+  /* Error modal */
+  #errModal { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 20; align-items: center; justify-content: center; padding: 24px; }
+  .modal-box { background: #fff; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 300px; text-align: center; }
+  .modal-box p { margin: 0 0 18px; font-size: 15px; color: #333; line-height: 1.5; }
+  .modal-box button { width: 100%; height: 42px; border-radius: 21px; background: #B5D4F4; color: #0C447C; border: none; font-size: 15px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -106,11 +112,17 @@
   <div class="login-card">
     <div class="login-row">
       <span>ID</span>
-      <input id="empId" type="text" placeholder="員工代號" autocomplete="off">
+      <input id="empId" type="text" placeholder="部門代號" autocomplete="off">
     </div>
   </div>
   <button class="btn-primary" id="loginBtn">登入</button>
-  <p class="err" id="loginErr"></p>
+</div>
+
+<div id="errModal">
+  <div class="modal-box">
+    <p id="errModalMsg"></p>
+    <button id="errModalOk">好</button>
+  </div>
 </div>
 
 <div id="homeScreen" class="screen">
@@ -186,12 +198,18 @@ function showScreen(id) {
 // ---- Login ----
 const VALID_IDS = ['2690'];
 
+function showErrModal(msg) {
+  document.getElementById('errModalMsg').textContent = msg;
+  document.getElementById('errModal').style.display = 'flex';
+}
+document.getElementById('errModalOk').addEventListener('click', () => {
+  document.getElementById('errModal').style.display = 'none';
+});
+
 document.getElementById('loginBtn').addEventListener('click', () => {
   const id = document.getElementById('empId').value.trim();
-  const err = document.getElementById('loginErr');
-  if (!id) { err.textContent = '請先輸入員工代號'; return; }
-  if (!VALID_IDS.includes(id)) { err.textContent = '代號錯誤，無法登入'; return; }
-  err.textContent = '';
+  if (!id) { showErrModal('請先輸入部門代號'); return; }
+  if (!VALID_IDS.includes(id)) { showErrModal('代號錯誤，無法登入'); return; }
   try { localStorage.setItem('emp_id', id); } catch(e) {}
   showScreen('homeScreen');
   renderCats();
