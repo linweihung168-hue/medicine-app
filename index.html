@@ -184,10 +184,13 @@ function showScreen(id) {
 }
 
 // ---- Login ----
+const VALID_IDS = ['2690'];
+
 document.getElementById('loginBtn').addEventListener('click', () => {
   const id = document.getElementById('empId').value.trim();
   const err = document.getElementById('loginErr');
   if (!id) { err.textContent = '請先輸入員工代號'; return; }
+  if (!VALID_IDS.includes(id)) { err.textContent = '代號錯誤，無法登入'; return; }
   err.textContent = '';
   try { localStorage.setItem('emp_id', id); } catch(e) {}
   showScreen('homeScreen');
