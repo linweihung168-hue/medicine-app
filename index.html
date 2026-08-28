@@ -174,7 +174,11 @@ const CATS = [
   { name: '兒科檯', filter: '兒科檯' },
   { name: '急診檯', filter: '急診檯' }
 ];
-const TAG_CLASS = { '高警訊': 'tag-warn', '四級管藥': 'tag-ctrl', '抗生素區': 'tag-abx', '止痛區': 'tag-pain', '一般藥品區': 'tag-loc' };
+const TAG_CLASS = { '高警訊': 'tag-warn', '四級管藥': 'tag-ctrl', '抗生素區': 'tag-abx', '止痛區': 'tag-pain', '一般藥品區': 'tag-loc', '疾管署': 'tag-ctrl', '少用': 'tag-loc' };
+function tagClass(tag) {
+  if (TAG_CLASS[tag]) return TAG_CLASS[tag];
+  return 'tag-loc';
+}
 
 let activeCat = null;
 let activeCode = null;
@@ -240,7 +244,7 @@ function renderList() {
   items.forEach(d => {
     const row = document.createElement('div');
     row.className = 'item-row';
-    const tagHtml = d.tag ? `<span class="tag ${TAG_CLASS[d.tag]||'tag-loc'}">${d.tag}</span>` : '';
+    const tagHtml = d.tag ? `<span class="tag ${tagClass(d.tag)}">${d.tag}</span>` : '';
     row.innerHTML = `
       <div style="flex:1;min-width:0;">
         <p class="name">${d.name}</p>
@@ -321,7 +325,7 @@ function renderDetail() {
   if (!item) { body.innerHTML = ''; return; }
 
   if (!editing) {
-    const tagHtml = item.tag ? `<span class="tag ${TAG_CLASS[item.tag]||'tag-loc'}" style="margin-top:6px;display:inline-block;">${item.tag}</span>` : '';
+    const tagHtml = item.tag ? `<span class="tag ${tagClass(item.tag)}" style="margin-top:6px;display:inline-block;">${item.tag}</span>` : '';
     body.innerHTML = `
       <div class="field"><label>藥名</label><div class="value">${item.name || '（未填寫）'}</div></div>
       <div class="field"><label>藥品碼</label><div class="value">${item.code.startsWith('__new__') ? '（尚未設定）' : item.code}</div></div>
@@ -340,10 +344,10 @@ function renderDetail() {
       </div>
       <div class="field"><label>位置</label><input id="f_loc" value="${(item.loc||'').replace(/"/g,'&quot;')}" placeholder="例如 ZCA右2"></div>
       <div class="field"><label>備註標籤</label>
-        <select id="f_tag" style="width:100%;height:42px;border-radius:10px;border:0.5px solid #ccc;font-size:16px;">
-          <option value="">無</option>
-          ${Object.keys(TAG_CLASS).map(t => `<option value="${t}" ${item.tag===t?'selected':''}>${t}</option>`).join('')}
-        </select>
+        <input id="f_tag" list="tagOptions" value="${(item.tag||'').replace(/"/g,'&quot;')}" placeholder="例如 高警訊、抗生素區，可留空">
+        <datalist id="tagOptions">
+          ${Object.keys(TAG_CLASS).map(t => `<option value="${t}">`).join('')}
+        </datalist>
       </div>
       <div class="detail-actions">
         <button class="btn-outline btn-danger" id="deleteBtn">刪除</button>
