@@ -204,6 +204,11 @@ function validLoc2(val) {
   if (!s) return '';
   return /^[A-Za-z]/.test(s) ? s : '';
 }
+function displayPlace(item) {
+  const manual = getPlacement(item['物品碼']);
+  if (manual) return manual;
+  return validLoc2(item['次料位號']);
+}
 
 async function fetchData() {
   const statusEl = document.getElementById('statusText');
@@ -235,7 +240,7 @@ document.getElementById('refreshBtn').addEventListener('click', fetchData);
 
 const FILTERS = [
   { name: '全部藥品', test: function(d){ return true; } },
-  { name: '放置區未設定', test: function(d){ return !getPlacement(d['物品碼']); } }
+  { name: '放置區未設定', test: function(d){ return !displayPlace(d); } }
 ];
 
 function currentList() {
@@ -266,7 +271,7 @@ function renderList() {
   }
   items.forEach(function(d) {
     const code = d['物品碼'];
-    const place = getPlacement(code);
+    const place = displayPlace(d);
     const row = document.createElement('div');
     row.className = 'item-row';
     row.innerHTML =
@@ -276,7 +281,7 @@ function renderList() {
       '</div>' +
       '<p class="full">' + (d['品名與內含量'] || '') + '</p>' +
       '<div class="tags">' +
-        '<span class="tag tag-loc">料位:' + (d['料位號'] || '未設定') + '</span>' +
+        '<span class="tag tag-loc">' + (d['料位號'] || '未設定') + '</span>' +
         '<span class="tag ' + (place ? 'tag-place-set' : 'tag-place-unset') + '">放置區:' + (place || '尚未設定') + '</span>' +
       '</div>';
     row.addEventListener('click', function(){ openDetail(code); });
@@ -333,7 +338,8 @@ function renderDetail() {
   const item = findItem(activeCode);
   const body = document.getElementById('detailBody');
   if (!item) { body.innerHTML = '<p class="empty-msg">找不到這筆資料</p>'; return; }
-  const place = getPlacement(activeCode);
+  const place = displayPlace(item);
+  const isManual = !!getPlacement(activeCode);
   const loc2 = validLoc2(item['次料位號']);
   const tags = statusTags(item);
   const tagsHtml = tags.map(function(t){ return '<span class="tag" style="background:#F1EFE8;color:#5F5E5A;">' + t + '</span>'; }).join(' ');
@@ -353,10 +359,10 @@ function renderDetail() {
       '<label>放置區(可自行編輯)</label>' +
       (editing
         ? '<input id="f_place" value="' + place.replace(/"/g,'&quot;') + '">'
-        : '<div class="value">' + (place ? '放置區:' + place : '尚未設定') + '</div>'
+        : '<div class="value">' + (place ? '放置區:' + place + (isManual ? '' : '<span style="font-size:12px;font-weight:400;color:#999;">（帶入次料位號，尚未確認）</span>') : '尚未設定') + '</div>'
       ) +
     '</div>' +
-    '<button class="btn-save" id="placeBtn">' + (editing ? '儲存放置區' : '編輯放置區') + '</button>';
+    '<button class="btn-save" id="placeBtn">' + (editing ? '儲存放置區' : (isManual ? '編輯放置區' : '確認/編輯放置區')) + '</button>';
 
   document.getElementById('placeBtn').addEventListener('click', function(){
     if (!editing) {
