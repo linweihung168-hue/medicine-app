@@ -39,7 +39,20 @@
   #search { flex: 1; height: 100%; border: none; background: transparent; font-size: 15px; outline: none; padding: 0; }
 
   .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 10px; font-size: 11px; color: #7699B8; }
-  .status-bar button { background: none; border: none; color: #185FA5; font-size: 11px; text-decoration: underline; padding: 0; }
+  #refreshBtn {
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 14px;
+    background: transparent;
+    border: 1px solid #B5D4F4;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #185FA5;
+    font-size: 11px;
+  }
+  #refreshBtn svg { flex-shrink: 0; }
+  #refreshBtn.spinning svg { animation: spin 0.7s linear infinite; }
 
   #list { background: #fff; border-radius: 18px 18px 0 0; padding: 4px 8px; flex: 1; min-height: 55vh; }
   .item-row { padding: 13px 8px; border-bottom: 0.5px solid #eee; }
@@ -74,6 +87,28 @@
   .tag-row-detail { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
   .btn-save { width: 100%; height: 48px; border-radius: 24px; background: #B5D4F4; color: #0C447C; border: none; font-size: 16px; font-weight: 700; margin-top: 10px; }
   .divider { height: 0.5px; background: #eee; margin: 22px 0; }
+
+  #pullIndicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 0;
+    overflow: hidden;
+    color: #185FA5;
+    font-size: 13px;
+    transition: height 0.15s ease;
+  }
+  #pullIndicator .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid #B5D4F4;
+    border-top-color: #0C447C;
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  #pullIndicator.loading .spinner { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   #scrollDot {
     position: fixed;
@@ -150,8 +185,9 @@
   </div>
   <div class="status-bar">
     <span id="statusText">載入中…</span>
-    <button id="refreshBtn">重新整理</button>
+    <button id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg><span>更新</span></button>
   </div>
+  <div id="pullIndicator"><span class="spinner"></span><span id="pullText">下拉重新整理</span></div>
   <div id="list"></div>
   <div id="scrollDot"></div>
 </div>
@@ -253,7 +289,11 @@ async function fetchData() {
   renderCats();
   renderList();
 }
-document.getElementById('refreshBtn').addEventListener('click', fetchData);
+document.getElementById('refreshBtn').addEventListener('click', function(){
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  fetchData().then(function(){ btn.classList.remove('spinning'); });
+});
 
 const FILTERS = [
   { name: '全部藥品', test: function(d){ return true; } },
@@ -445,7 +485,81 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
 }
 
-// ---- Draggable scroll-to-top dot ----
+// ---- Edge swipe to go back (detail screen only) ----
+(function() {
+  let startX = 0, startY = 0, tracking = false;
+  const EDGE_ZONE = 24;
+  const THRESHOLD = 80;
+
+  document.addEventListener('touchstart', function(e) {
+    if (!document.getElementById('detailScreen').classList.contains('active')) return;
+    const t = e.touches[0];
+    if (t.clientX <= EDGE_ZONE) {
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = true;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!tracking) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = Math.abs(t.clientY - startY);
+    if (dx > THRESHOLD && dy < 60) {
+      tracking = false;
+      document.getElementById('backBtn').click();
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function() {
+    tracking = false;
+  }, { passive: true });
+})();
+
+// ---- Pull to refresh (home screen only) ----
+(function() {
+  const indicator = document.getElementById('pullIndicator');
+  const pullText = document.getElementById('pullText');
+  let startY = 0, pulling = false, triggered = false;
+  const THRESHOLD = 60;
+  const MAX_PULL = 90;
+
+  document.addEventListener('touchstart', function(e) {
+    if (!document.getElementById('homeScreen').classList.contains('active')) return;
+    if (window.scrollY > 0) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+    triggered = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!pulling || triggered) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) { indicator.style.height = '0px'; return; }
+    const capped = Math.min(dy * 0.5, MAX_PULL);
+    indicator.style.height = capped + 'px';
+    pullText.textContent = capped >= THRESHOLD ? '放開立即更新' : '下拉重新整理';
+  }, { passive: true });
+
+  document.addEventListener('touchend', function() {
+    if (!pulling) return;
+    pulling = false;
+    const h = parseFloat(indicator.style.height) || 0;
+    if (h >= THRESHOLD && !triggered) {
+      triggered = true;
+      indicator.classList.add('loading');
+      pullText.textContent = '更新中…';
+      indicator.style.height = '48px';
+      fetchData().then(function() {
+        indicator.classList.remove('loading');
+        indicator.style.height = '0px';
+      });
+    } else {
+      indicator.style.height = '0px';
+    }
+  }, { passive: true });
+})();
 (function() {
   const dot = document.getElementById('scrollDot');
   let dragging = false, moved = false, startX, startY, startLeft, startTop;
