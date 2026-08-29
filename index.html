@@ -66,14 +66,14 @@
   #detailScreen { background: #fff; }
   .detail-top { display: flex; align-items: center; gap: 10px; padding: 16px; border-bottom: 0.5px solid #eee; }
   .detail-body { padding: 20px 18px; flex: 1; }
-  .field { margin-bottom: 20px; }
-  .field label { display: block; font-size: 12px; color: #999; margin-bottom: 6px; }
-  .field .value { font-size: 16px; font-weight: 700; color: #2E4E6B; line-height: 1.5; }
-  .field .value.sub { font-size: 14px; font-weight: 400; color: #7699B8; }
-  .field input { width: 100%; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 0.5px solid #ccc; outline: none; font-family: inherit; }
+  .field { margin-bottom: 22px; }
+  .field label { display: block; font-size: 13px; color: #999; margin-bottom: 7px; }
+  .field .value { font-size: 19px; font-weight: 700; color: #2E4E6B; line-height: 1.5; }
+  .field .value.sub { font-size: 16px; font-weight: 400; color: #7699B8; }
+  .field input { width: 100%; font-size: 18px; padding: 12px 14px; border-radius: 10px; border: 0.5px solid #ccc; outline: none; font-family: inherit; }
   .tag-row-detail { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .btn-save { width: 100%; height: 46px; border-radius: 23px; background: #0C447C; color: #fff; border: none; font-size: 15px; font-weight: 700; margin-top: 10px; }
-  .divider { height: 0.5px; background: #eee; margin: 20px 0; }
+  .btn-save { width: 100%; height: 48px; border-radius: 24px; background: #B5D4F4; color: #0C447C; border: none; font-size: 16px; font-weight: 700; margin-top: 10px; }
+  .divider { height: 0.5px; background: #eee; margin: 22px 0; }
 
   #errModal { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 20; align-items: center; justify-content: center; padding: 24px; }
   .modal-box { background: #fff; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 300px; text-align: center; }
@@ -199,6 +199,11 @@ document.getElementById('loginBtn').addEventListener('click', () => {
 function normalizeCode(code) {
   return String(code || '').replace(/^\*/, '').trim().toLowerCase();
 }
+function validLoc2(val) {
+  const s = String(val || '').trim();
+  if (!s) return '';
+  return /^[A-Za-z]/.test(s) ? s : '';
+}
 
 async function fetchData() {
   const statusEl = document.getElementById('statusText');
@@ -230,8 +235,6 @@ document.getElementById('refreshBtn').addEventListener('click', fetchData);
 
 const FILTERS = [
   { name: '全部藥品', test: function(d){ return true; } },
-  { name: '已剔除', test: function(d){ return d['狀態'] === '已剔除'; } },
-  { name: '暫停使用', test: function(d){ return d['狀態'] === '暫停使用'; } },
   { name: '放置區未設定', test: function(d){ return !getPlacement(d['物品碼']); } }
 ];
 
@@ -273,8 +276,8 @@ function renderList() {
       '</div>' +
       '<p class="full">' + (d['品名與內含量'] || '') + '</p>' +
       '<div class="tags">' +
-        '<span class="tag tag-loc">' + (d['料位號'] || '未設定料位') + '</span>' +
-        '<span class="tag ' + (place ? 'tag-place-set' : 'tag-place-unset') + '">' + (place || '尚未設定') + '</span>' +
+        '<span class="tag tag-loc">料位:' + (d['料位號'] || '未設定') + '</span>' +
+        '<span class="tag ' + (place ? 'tag-place-set' : 'tag-place-unset') + '">放置區:' + (place || '尚未設定') + '</span>' +
       '</div>';
     row.addEventListener('click', function(){ openDetail(code); });
     list.appendChild(row);
@@ -331,6 +334,7 @@ function renderDetail() {
   const body = document.getElementById('detailBody');
   if (!item) { body.innerHTML = '<p class="empty-msg">找不到這筆資料</p>'; return; }
   const place = getPlacement(activeCode);
+  const loc2 = validLoc2(item['次料位號']);
   const tags = statusTags(item);
   const tagsHtml = tags.map(function(t){ return '<span class="tag" style="background:#F1EFE8;color:#5F5E5A;">' + t + '</span>'; }).join(' ');
 
@@ -341,15 +345,15 @@ function renderDetail() {
     '<div class="divider"></div>' +
     '<div class="field"><label>物品碼</label><div class="value">' + item['物品碼'] + '</div></div>' +
     '<div class="field"><label>料位號</label><div class="value">' + (item['料位號'] || '（未設定）') + '</div></div>' +
-    (item['次料位號'] ? '<div class="field"><label>次料位號</label><div class="value">' + item['次料位號'] + '</div></div>' : '') +
+    (loc2 ? '<div class="field"><label>次料位號</label><div class="value">' + loc2 + '</div></div>' : '') +
     (tags.length ? '<div class="field"><label>狀態標籤</label><div class="tag-row-detail">' + tagsHtml + '</div></div>' : '') +
     (item['備註'] ? '<div class="field"><label>備註</label><div class="value sub">' + item['備註'] + '</div></div>' : '') +
     '<div class="divider"></div>' +
     '<div class="field">' +
-      '<label>放置區（自行記錄，此欄不會被公司資料覆蓋）</label>' +
+      '<label>放置區(可自行編輯)</label>' +
       (editing
-        ? '<input id="f_place" value="' + place.replace(/"/g,'&quot;') + '" placeholder="例如 ZCA右2">'
-        : '<div class="value">' + (place || '尚未設定') + '</div>'
+        ? '<input id="f_place" value="' + place.replace(/"/g,'&quot;') + '">'
+        : '<div class="value">' + (place ? '放置區:' + place : '尚未設定') + '</div>'
       ) +
     '</div>' +
     '<button class="btn-save" id="placeBtn">' + (editing ? '儲存放置區' : '編輯放置區') + '</button>';
