@@ -394,7 +394,7 @@ async function fetchData() {
 const FILTERS = [
   { name: '全部藥品', test: function(d){ return true; } },
   { name: '放置區未設定', test: function(d){ return !displayPlace(d); } },
-  { name: '高警', test: function(d){ return d['高警'] === '警'; } },
+  { name: '高警', test: function(d){ return d['高警'] === '高警訊'; } },
   { name: '抗生', test: function(d){ return !!d['抗生']; } },
   { name: '危害', test: function(d){ return d['危害'] === 'Y' || d['危害'] === 'S'; } }
 ];
@@ -498,10 +498,10 @@ document.getElementById('backBtn').addEventListener('click', function(){
 
 function statusTags(item) {
   const tags = [];
-  if (item['狀態']) tags.push(item['狀態']);
-  if (item['高警'] === '警') tags.push('高警訊');
+  if (item['狀態']) tags.push(shortStatus(item));
+  if (item['高警'] === '高警訊') tags.push('警');
   if (item['抗生']) tags.push('抗生素');
-  if (item['危害'] === 'Y' || item['危害'] === 'S') tags.push('危害藥品');
+  if (item['危害'] === 'Y' || item['危害'] === 'S') tags.push('危');
   return tags;
 }
 
