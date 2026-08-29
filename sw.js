@@ -1,4 +1,4 @@
-const CACHE_NAME = 'find-medicine-v2';
+const CACHE_NAME = 'find-medicine-v3';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -14,9 +14,13 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Never cache the live data API - always go to network for that
   if (e.request.url.includes('script.google.com')) return;
+  // Network-first for our own files so updates always take effect immediately
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request).catch(() => cached))
+    fetch(e.request).then((res) => {
+      const resClone = res.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });
