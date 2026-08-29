@@ -40,20 +40,6 @@
   #search { flex: 1; height: 100%; border: none; background: transparent; font-size: 15px; outline: none; padding: 0; }
 
   .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 10px; font-size: 11px; color: #7699B8; }
-  #refreshBtn {
-    height: 28px;
-    padding: 0 12px;
-    border-radius: 14px;
-    background: transparent;
-    border: 1px solid #B5D4F4;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: #185FA5;
-    font-size: 11px;
-  }
-  #refreshBtn svg { flex-shrink: 0; }
-  #refreshBtn.spinning svg { animation: spin 0.7s linear infinite; }
 
   #list { background: #fff; border-radius: 18px 18px 0 0; padding: 4px 8px; flex: 1; min-height: 55vh; }
   .item-row { padding: 13px 8px; border-bottom: 0.5px solid #eee; }
@@ -63,10 +49,29 @@
   .tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .tag { font-size: 12px; padding: 2px 8px; border-radius: 8px; flex-shrink: 0; }
   .tag-code { background: #B5D4F4; color: #0C447C; font-weight: 700; }
-  .tag-loc { background: #E6F1FB; color: #185FA5; }
+  .tag-loc { background: #F1F8FE; color: #185FA5; border: 0.5px solid #B5D4F4; }
   .tag-place-set { background: #FBF3D9; color: #7A5B06; }
   .tag-place-unset { background: #FCEBEB; color: #791F1F; }
   .empty-msg { text-align: center; color: #999; font-size: 13px; padding: 40px 20px; line-height: 1.6; }
+
+  .item-row.muted .name { color: #7699B8; }
+  .item-row.muted .tag-code { background: #F1EFE8; color: #888780; }
+  .item-row.muted .tag-loc { background: #F1EFE8; color: #888780; border-color: #ddd; }
+  .tag-status { background: transparent; color: #888780; border: 0.5px solid #ccc; }
+
+  #emptyState { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 56px 24px 0; }
+  #emptyState .brand-logo { width: 60px; height: 60px; margin-bottom: 28px; }
+  .chip-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 18px; }
+  .chip { display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border-radius: 14px; background: #fff; border: 0.5px solid #B5D4F4; font-size: 13px; color: #0C447C; padding: 0; }
+  .chip svg { flex-shrink: 0; }
+  .recent-wrap { width: 100%; margin-top: 26px; }
+  .recent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .recent-head span { font-size: 12px; color: #7699B8; }
+  .recent-head button { background: none; border: none; padding: 4px; display: flex; }
+  .recent-item { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; border: 0.5px solid #eee; }
+  .recent-item .tag-code { font-size: 11px; padding: 1px 7px; }
+  .recent-item span.rname { font-size: 13px; color: #2E4E6B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-empty { font-size: 12px; color: #bbb; text-align: center; padding: 8px 0; }
 
   #overlay { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 8; }
   #drawer { display: none; position: fixed; top: 0; left: 0; bottom: 0; width: 250px; background: #fff; z-index: 9; box-shadow: 2px 0 16px rgba(0,0,0,0.15); padding: 20px 0; overflow-y: auto; }
@@ -111,28 +116,7 @@
   #pullIndicator.loading .spinner { display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  #scrollDot {
-    position: fixed;
-    right: 14px;
-    width: 34px;
-    height: 34px;
-    border-radius: 17px;
-    background: radial-gradient(circle at 35% 30%, #EAF3FC 0%, #8FBBE8 100%);
-    box-shadow: 0 2px 6px rgba(12,68,124,0.2);
-    z-index: 15;
-    display: none;
-    touch-action: none;
-    cursor: grab;
-  }
-  #scrollDot::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 16px; height: 16px;
-    border-radius: 8px;
-    background: #EFF6FC;
-    transform: translate(-50%, -50%);
-  }
+  .status-bar.tappable { cursor: pointer; }
 
   #errModal { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 20; align-items: center; justify-content: center; padding: 24px; }
   .modal-box { background: #fff; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 300px; text-align: center; }
@@ -181,16 +165,44 @@
     </button>
     <div class="search-wrap">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input id="search" type="text" placeholder="搜尋藥名、藥品碼">
+      <input id="search" type="text" placeholder="搜尋藥名、藥品碼、料位號">
     </div>
   </div>
-  <div class="status-bar">
-    <span id="statusText">載入中…</span>
-    <button id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg><span>更新</span></button>
+
+  <div id="emptyState">
+    <svg class="brand-logo" viewBox="0 0 68 68">
+      <rect x="4" y="4" width="60" height="60" rx="16" fill="#FBFDFF"/>
+      <g transform="translate(30,30) rotate(-35)">
+        <rect x="-19" y="-6.5" width="38" height="13" rx="6.5" fill="#85B7EB"/>
+        <rect x="-19" y="-6.5" width="19" height="13" rx="6.5" fill="#0C447C"/>
+        <rect x="-9" y="-6.5" width="9" height="13" fill="#0C447C"/>
+        <path d="M 0 -6.5 L 0 6.5" stroke="#FBFDFF" stroke-width="1.5"/>
+      </g>
+      <g transform="translate(46,46)">
+        <circle r="10" fill="#FBFDFF" stroke="#0C447C" stroke-width="2.2"/>
+        <line x1="7" y1="7" x2="13" y2="13" stroke="#0C447C" stroke-width="2.4" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <div class="chip-grid" id="chipGrid"></div>
+    <div class="recent-wrap">
+      <div class="recent-head">
+        <span>最近查詢</span>
+        <button id="clearRecentBtn" aria-label="清除最近查詢">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+      <div id="recentList"></div>
+    </div>
   </div>
-  <div id="pullIndicator"><span class="spinner"></span><span id="pullText">下拉重新整理</span></div>
-  <div id="list"></div>
-  <div id="scrollDot"></div>
+
+  <div id="resultsState" style="display:none; flex:1; flex-direction:column;">
+    <div class="status-bar tappable" id="statusBar">
+      <span id="statusText">載入中…</span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+    </div>
+    <div id="pullIndicator"><span class="spinner"></span><span id="pullText">下拉重新整理</span></div>
+    <div id="list"></div>
+  </div>
 </div>
 
 <div id="detailScreen" class="screen">
@@ -206,6 +218,11 @@
 <div id="drawer">
   <div class="drawer-head"><p>篩選</p></div>
   <div id="cats"></div>
+  <div class="divider" style="margin:8px 18px;"></div>
+  <button class="cat-row" id="drawerRefreshBtn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    <span class="label" id="drawerRefreshLabel">更新</span>
+  </button>
 </div>
 
 <script>
@@ -222,6 +239,88 @@ function getPlacement(code) {
   const item = findItem(code);
   return item ? (item['放置區'] || '') : '';
 }
+
+const DISCONTINUED_STATUSES = ['已剔除', '暫停使用'];
+const STATUS_SHORT = { '已剔除': '剔除', '暫停使用': '暫停' };
+function isDiscontinued(item) {
+  return DISCONTINUED_STATUSES.includes(item['狀態']);
+}
+function shortStatus(item) {
+  return STATUS_SHORT[item['狀態']] || item['狀態'] || '';
+}
+
+function updateHomeView() {
+  const hasQuery = !!(document.getElementById('search').value || '').trim();
+  const showResults = hasQuery || activeFilter !== null;
+  document.getElementById('emptyState').style.display = showResults ? 'none' : 'flex';
+  document.getElementById('resultsState').style.display = showResults ? 'flex' : 'none';
+  if (!showResults) renderRecent();
+}
+
+function setFilter(name) {
+  activeFilter = name;
+  document.getElementById('search').value = '';
+  renderCats();
+  renderList();
+  updateHomeView();
+  closeDrawer();
+}
+
+const RECENT_KEY = 'recent_codes';
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) { return []; }
+}
+function addRecent(code) {
+  try {
+    let list = getRecent().filter(function(c){ return c !== code; });
+    list.unshift(code);
+    list = list.slice(0, 5);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch(e) {}
+}
+function renderRecent() {
+  const box = document.getElementById('recentList');
+  const codes = getRecent();
+  box.innerHTML = '';
+  if (codes.length === 0) {
+    box.innerHTML = '<p class="recent-empty">還沒有查詢紀錄</p>';
+    return;
+  }
+  codes.forEach(function(code) {
+    const item = findItem(code);
+    if (!item) return;
+    const row = document.createElement('div');
+    row.className = 'recent-item';
+    row.innerHTML = '<span class="tag tag-code">' + code + '</span><span class="rname">' + (item['俗名'] || '（未命名）') + '</span>';
+    row.addEventListener('click', function(){ openDetail(code); });
+    box.appendChild(row);
+  });
+}
+document.getElementById('clearRecentBtn').addEventListener('click', function(){
+  if (!confirm('清除全部最近查詢紀錄？')) return;
+  try { localStorage.removeItem(RECENT_KEY); } catch(e) {}
+  renderRecent();
+});
+
+const CHIPS = [
+  { name: '高警', label: '高警', color: '#A32D2D', icon: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.71 3.86a2 2 0 0 0-3.42 0z"/>' },
+  { name: '抗生', label: '抗生', color: '#185FA5', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
+  { name: '危害', label: '危害', color: '#A32D2D', icon: '<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' },
+  { name: '放置區未設定', label: '放置區未設定', color: '#5F5E5A', icon: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><line x1="4" y1="4" x2="20" y2="20"/>' }
+];
+function renderChips() {
+  const box = document.getElementById('chipGrid');
+  box.innerHTML = '';
+  CHIPS.forEach(function(c) {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.style.color = c.color;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + c.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + c.icon + '</svg><span>' + c.label + '</span>';
+    btn.addEventListener('click', function(){ setFilter(c.name); });
+    box.appendChild(btn);
+  });
+}
+renderChips();
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -289,17 +388,17 @@ async function fetchData() {
   }
   renderCats();
   renderList();
+  updateHomeView();
 }
-document.getElementById('refreshBtn').addEventListener('click', function(){
-  const btn = document.getElementById('refreshBtn');
-  btn.classList.add('spinning');
-  fetchData().then(function(){ btn.classList.remove('spinning'); });
-});
 
 const FILTERS = [
   { name: '全部藥品', test: function(d){ return true; } },
-  { name: '放置區未設定', test: function(d){ return !displayPlace(d); } }
+  { name: '放置區未設定', test: function(d){ return !displayPlace(d); } },
+  { name: '高警', test: function(d){ return d['高警'] === '警'; } },
+  { name: '抗生', test: function(d){ return !!d['抗生']; } },
+  { name: '危害', test: function(d){ return d['危害'] === 'Y' || d['危害'] === 'S'; } }
 ];
+const MENU_FILTERS = ['全部藥品', '放置區未設定'];
 
 function currentList() {
   let items = rawData;
@@ -313,8 +412,12 @@ function currentList() {
       return (d['俗名']||'').toLowerCase().includes(q) ||
              (d['品名與內含量']||'').toLowerCase().includes(q) ||
              (d['學名']||'').toLowerCase().includes(q) ||
+             (String(d['料位號']||'')).toLowerCase().includes(q) ||
+             (String(d['次料位號']||'')).toLowerCase().includes(q) ||
              codeNorm.includes(qNorm);
     });
+  } else {
+    items = items.filter(function(d){ return !isDiscontinued(d); });
   }
   return items;
 }
@@ -330,8 +433,9 @@ function renderList() {
   items.forEach(function(d) {
     const code = d['物品碼'];
     const place = displayPlace(d);
+    const discontinued = isDiscontinued(d);
     const row = document.createElement('div');
-    row.className = 'item-row';
+    row.className = 'item-row' + (discontinued ? ' muted' : '');
     row.innerHTML =
       '<div class="name-row">' +
         '<span class="tag tag-code">' + code + '</span>' +
@@ -341,27 +445,27 @@ function renderList() {
       '<div class="tags">' +
         '<span class="tag tag-loc">' + (d['料位號'] || '未設定') + '</span>' +
         '<span class="tag ' + (place ? 'tag-place-set' : 'tag-place-unset') + '">放置區:' + (place || '尚未設定') + '</span>' +
+        (discontinued ? '<span class="tag tag-status">' + shortStatus(d) + '</span>' : '') +
       '</div>';
     row.addEventListener('click', function(){ openDetail(code); });
     list.appendChild(row);
   });
 }
-document.getElementById('search').addEventListener('input', renderList);
+document.getElementById('search').addEventListener('input', function(){
+  renderList();
+  updateHomeView();
+});
 
 function renderCats() {
   const box = document.getElementById('cats');
   box.innerHTML = '';
-  FILTERS.forEach(function(f) {
+  MENU_FILTERS.forEach(function(name) {
+    const f = FILTERS.find(function(x){ return x.name === name; });
     const n = rawData.filter(f.test).length;
     const btn = document.createElement('button');
-    btn.className = 'cat-row' + ((activeFilter === f.name || (!activeFilter && f.name==='全部藥品')) ? ' active' : '');
+    btn.className = 'cat-row' + (activeFilter === f.name ? ' active' : '');
     btn.innerHTML = '<span class="label">' + f.name + '</span><span class="n">' + n + '</span>';
-    btn.addEventListener('click', function(){
-      activeFilter = f.name === '全部藥品' ? null : f.name;
-      renderCats();
-      renderList();
-      closeDrawer();
-    });
+    btn.addEventListener('click', function(){ setFilter(f.name); });
     box.appendChild(btn);
   });
 }
@@ -369,12 +473,21 @@ function openDrawer() { document.getElementById('drawer').style.display = 'block
 function closeDrawer() { document.getElementById('drawer').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; }
 document.getElementById('menuBtn').addEventListener('click', openDrawer);
 document.getElementById('overlay').addEventListener('click', closeDrawer);
+document.getElementById('drawerRefreshBtn').addEventListener('click', function(){
+  const label = document.getElementById('drawerRefreshLabel');
+  label.textContent = '更新中…';
+  fetchData().then(function(){
+    label.textContent = '更新';
+    closeDrawer();
+  });
+});
 
 function findItem(code) { return rawData.find(function(d){ return d['物品碼'] === code; }); }
 
 function openDetail(code) {
   activeCode = code;
   editing = false;
+  addRecent(code);
   renderDetail();
   showScreen('detailScreen');
 }
@@ -589,77 +702,9 @@ if ('serviceWorker' in navigator) {
   }, { passive: true });
 })();
 (function() {
-  const dot = document.getElementById('scrollDot');
-  let dragging = false, moved = false, startX, startY, startLeft, startTop;
-  let dotTop = window.innerHeight * 0.45;
-  dot.style.top = dotTop + 'px';
-
-  function updateVisibility() {
-    const homeActive = document.getElementById('homeScreen').classList.contains('active');
-    dot.style.display = (homeActive && window.scrollY > 200) ? 'block' : 'none';
-  }
-  window.addEventListener('scroll', updateVisibility);
-
-  function pos(e) {
-    return e.touches ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY };
-  }
-  function onDown(e) {
-    dragging = true; moved = false;
-    const p = pos(e);
-    startX = p.x; startY = p.y;
-    const rect = dot.getBoundingClientRect();
-    startLeft = rect.left;
-    startTop = rect.top;
-    dot.style.cursor = 'grabbing';
-  }
-  function onMoveDrag(e) {
-    if (!dragging) return;
-    const p = pos(e);
-    const dx = p.x - startX, dy = p.y - startY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
-    let newLeft = startLeft + dx;
-    let newTop = startTop + dy;
-    newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - 34));
-    newTop = Math.max(0, Math.min(newTop, window.innerHeight - 34));
-    dot.style.left = newLeft + 'px';
-    dot.style.right = 'auto';
-    dot.style.top = newTop + 'px';
-  }
-  function onUp() {
-    if (!dragging) return;
-    dragging = false;
-    dot.style.cursor = 'grab';
-    if (moved) {
-      const rect = dot.getBoundingClientRect();
-      const centerX = rect.left + 17;
-      dot.style.transition = 'left 0.2s, right 0.2s';
-      if (centerX < window.innerWidth / 2) {
-        dot.style.left = '14px'; dot.style.right = 'auto';
-      } else {
-        dot.style.left = 'auto'; dot.style.right = '14px';
-      }
-      dotTop = rect.top;
-      setTimeout(function(){ dot.style.transition = ''; }, 200);
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      document.getElementById('search').value = '';
-      renderList();
-      activeFilter = null;
-      renderCats();
-    }
-  }
-  dot.addEventListener('mousedown', onDown);
-  dot.addEventListener('touchstart', onDown, { passive: true });
-  window.addEventListener('mousemove', onMoveDrag);
-  window.addEventListener('touchmove', onMoveDrag, { passive: false });
-  window.addEventListener('mouseup', onUp);
-  window.addEventListener('touchend', onUp);
-
-  const origShowScreen = showScreen;
-  showScreen = function(id) {
-    origShowScreen(id);
-    updateVisibility();
-  };
+  document.getElementById('statusBar').addEventListener('click', function(){
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 })();
 </script>
 </body>
