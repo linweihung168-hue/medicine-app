@@ -394,13 +394,38 @@ function renderDetail() {
   });
 }
 
+function jsonp(url) {
+  return new Promise(function(resolve, reject) {
+    const cbName = 'jsonpCb' + Date.now();
+    const timeoutId = setTimeout(function() {
+      cleanup();
+      reject(new Error('逾時'));
+    }, 10000);
+    function cleanup() {
+      clearTimeout(timeoutId);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+    const script = document.createElement('script');
+    script.src = url + '&callback=' + cbName;
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('載入失敗'));
+    };
+    document.body.appendChild(script);
+  });
+}
+
 async function saveDetail(val) {
   saving = true;
   renderDetail();
   try {
     const url = API_URL + '?action=save&code=' + encodeURIComponent(activeCode) + '&placement=' + encodeURIComponent(val);
-    const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-    const result = await res.json();
+    const result = await jsonp(url);
     if (!result.success) throw new Error(result.error || '儲存失敗');
     const item = findItem(activeCode);
     if (item) item['放置區'] = val;
