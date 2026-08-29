@@ -176,21 +176,15 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwuxH_W7r15msTCXEUbC8ZK
 const VALID_IDS = ['2690'];
 
 let rawData = [];
-let placements = {};
 let activeFilter = null;
 let activeCode = null;
 let editing = false;
+let saving = false;
 
-function loadPlacements() {
-  try {
-    const saved = localStorage.getItem('med_placements');
-    placements = saved ? JSON.parse(saved) : {};
-  } catch(e) { placements = {}; }
+function getPlacement(code) {
+  const item = findItem(code);
+  return item ? (item['放置區'] || '') : '';
 }
-function savePlacements() {
-  try { localStorage.setItem('med_placements', JSON.stringify(placements)); } catch(e) {}
-}
-function getPlacement(code) { return placements[code] || ''; }
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -210,7 +204,6 @@ document.getElementById('loginBtn').addEventListener('click', () => {
   if (!VALID_IDS.includes(id)) { showErrModal('代號錯誤，無法登入'); return; }
   try { localStorage.setItem('emp_id', id); } catch(e) {}
   showScreen('homeScreen');
-  loadPlacements();
   fetchData();
 });
 (function autoLogin() {
@@ -229,7 +222,7 @@ function validLoc2(val) {
   return /^[A-Za-z]/.test(s) ? s : '';
 }
 function displayPlace(item) {
-  const manual = getPlacement(item['物品碼']);
+  const manual = item['放置區'] || '';
   if (manual) return manual;
   return validLoc2(item['次料位號']);
 }
@@ -363,7 +356,7 @@ function renderDetail() {
   const body = document.getElementById('detailBody');
   if (!item) { body.innerHTML = '<p class="empty-msg">找不到這筆資料</p>'; return; }
   const place = displayPlace(item);
-  const isManual = !!getPlacement(activeCode);
+  const isManual = !!(item['放置區']);
   const loc2 = validLoc2(item['次料位號']);
   const tags = statusTags(item);
   const tagsHtml = tags.map(function(t){ return '<span class="tag" style="background:#F1EFE8;color:#5F5E5A;">' + t + '</span>'; }).join(' ');
@@ -386,21 +379,44 @@ function renderDetail() {
         : '<div class="value">' + (place ? '放置區:' + place + (isManual ? '' : '<span style="font-size:12px;font-weight:400;color:#999;">（帶入次料位號，尚未確認）</span>') : '尚未設定') + '</div>'
       ) +
     '</div>' +
-    '<button class="btn-save" id="placeBtn">' + (editing ? '儲存放置區' : (isManual ? '編輯放置區' : '確認/編輯放置區')) + '</button>';
+    '<button class="btn-save" id="placeBtn">' + (editing ? (saving ? '儲存中…' : '儲存放置區') : (isManual ? '編輯放置區' : '確認/編輯放置區')) + '</button>' +
+    (editing ? '<p id="saveErr" style="color:#A32D2D;font-size:13px;text-align:center;margin-top:8px;"></p>' : '');
 
   document.getElementById('placeBtn').addEventListener('click', function(){
+    if (saving) return;
     if (!editing) {
       editing = true;
       renderDetail();
     } else {
       const val = document.getElementById('f_place').value.trim();
-      if (val) placements[activeCode] = val; else delete placements[activeCode];
-      savePlacements();
-      editing = false;
-      renderDetail();
-      renderCats();
+      saveDetail(val);
     }
   });
+}
+
+async function saveDetail(val) {
+  saving = true;
+  renderDetail();
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ code: activeCode, placement: val })
+    });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || '儲存失敗');
+    const item = findItem(activeCode);
+    if (item) item['放置區'] = val;
+    saving = false;
+    editing = false;
+    renderDetail();
+    renderCats();
+  } catch (err) {
+    saving = false;
+    renderDetail();
+    const errEl = document.getElementById('saveErr');
+    if (errEl) errEl.textContent = '儲存失敗，請確認網路連線後再試一次';
+  }
 }
 
 if ('serviceWorker' in navigator) {
