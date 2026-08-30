@@ -128,6 +128,22 @@
   .modal-box { background: #fff; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 300px; text-align: center; }
   .modal-box p { margin: 0 0 18px; font-size: 15px; color: #333; line-height: 1.5; }
   .modal-box button { width: 100%; height: 42px; border-radius: 21px; background: #B5D4F4; color: #0C447C; border: none; font-size: 15px; font-weight: 700; }
+
+  #versionModal { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 20; align-items: center; justify-content: center; padding: 24px; }
+  .version-box { background: #fff; border-radius: 16px; padding: 22px 20px; width: 100%; max-width: 300px; text-align: left; }
+  .version-box .v-title { font-size: 16px; font-weight: 700; color: #042C53; margin: 0 0 16px; }
+  #versionList { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+  .v-item { border: 0.5px solid #eee; border-radius: 10px; overflow: hidden; }
+  .v-head { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: #fff; border: none; text-align: left; }
+  .v-head .v-num { font-size: 14px; font-weight: 700; color: #042C53; }
+  .v-head svg { transition: transform 0.25s; flex-shrink: 0; }
+  .v-item.open .v-head svg { transform: rotate(180deg); }
+  .v-body { display: none; padding: 2px 14px 12px; flex-direction: column; gap: 7px; }
+  .v-item.open .v-body { display: flex; }
+  .v-line { display: flex; font-size: 12.5px; color: #555; line-height: 1.5; }
+  .v-line .dot { flex-shrink: 0; }
+  .v-line .txt { flex: 1; }
+  .version-box .v-close { margin-top: 14px; width: 100%; height: 42px; border-radius: 21px; background: #B5D4F4; color: #0C447C; border: none; font-size: 15px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -161,6 +177,14 @@
   <div class="modal-box">
     <p id="errModalMsg"></p>
     <button id="errModalOk">好</button>
+  </div>
+</div>
+
+<div id="versionModal">
+  <div class="version-box">
+    <p class="v-title">版本資訊</p>
+    <div id="versionList"></div>
+    <button class="v-close" id="versionModalClose">好</button>
   </div>
 </div>
 
@@ -230,6 +254,10 @@
   <button class="cat-row" id="drawerRefreshBtn">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
     <span class="label" id="drawerRefreshLabel">更新</span>
+  </button>
+  <button class="cat-row" id="versionInfoBtn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <span class="label">版本資訊</span>
   </button>
 </div>
 
@@ -500,6 +528,59 @@ function goHome() {
 }
 document.getElementById('homeBtn').addEventListener('click', goHome);
 document.getElementById('edgeHandle').addEventListener('click', openDrawer);
+
+const VERSION_HISTORY = [
+  { v: 'v1.1', items: [
+    '首頁改版為搜尋優先設計,新增高警/抗生/危害/放置區未設定快速篩選、最近查詢紀錄',
+    '搜尋新增支援料位號、次料位號查詢',
+    '已剔除／暫停使用品項清單預設隱藏,搜尋仍可查得',
+    '新增左緣滑動開啟選單,Home 圖示取代選單圖示,一鍵回首頁',
+    '更新功能移入選單;移除浮動回頂按鈕,改點擊清單頂部回頂',
+    '卡片標籤配色優化,料位號與物品碼視覺區隔更清楚'
+  ]},
+  { v: 'v1.0', items: [
+    'PWA 獨立網頁 App,可加入主畫面全螢幕使用',
+    '即時連接 Google 試算表,雙向同步讀寫',
+    '放置區欄位可即時編輯並寫回試算表,自動帶入次料位號作為參考預設值',
+    '智慧搜尋：支援物品碼(免輸入*)、俗名、品名、學名模糊比對',
+    '側邊選單篩選(全部藥品／放置區未設定)',
+    '下拉刷新資料',
+    '邊緣滑動手勢返回上一頁',
+    '可拖曳回頂部按鈕',
+    '部門代號登入驗證',
+    '5 分鐘無操作自動登出'
+  ]}
+];
+let openVersionIdx = 0;
+function renderVersionList() {
+  const box = document.getElementById('versionList');
+  box.innerHTML = '';
+  VERSION_HISTORY.forEach(function(ver, idx) {
+    const isOpen = idx === openVersionIdx;
+    const item = document.createElement('div');
+    item.className = 'v-item' + (isOpen ? ' open' : '');
+    const bodyHtml = ver.items.map(function(t){
+      return '<div class="v-line"><span class="dot">・</span><span class="txt">' + t + '</span></div>';
+    }).join('');
+    item.innerHTML =
+      '<button class="v-head"><span class="v-num">' + ver.v + '</span>' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>' +
+      '<div class="v-body">' + bodyHtml + '</div>';
+    item.querySelector('.v-head').addEventListener('click', function(){
+      openVersionIdx = isOpen ? -1 : idx;
+      renderVersionList();
+    });
+    box.appendChild(item);
+  });
+}
+document.getElementById('versionInfoBtn').addEventListener('click', function(){
+  renderVersionList();
+  document.getElementById('versionModal').style.display = 'flex';
+  closeDrawer();
+});
+document.getElementById('versionModalClose').addEventListener('click', function(){
+  document.getElementById('versionModal').style.display = 'none';
+});
 
 function findItem(code) { return rawData.find(function(d){ return d['物品碼'] === code; }); }
 
