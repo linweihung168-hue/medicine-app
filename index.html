@@ -250,6 +250,7 @@
 </div>
 
 <script>
+// ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
 const VALID_IDS = ['2690'];
 
@@ -259,6 +260,7 @@ let activeCode = null;
 let editing = false;
 let saving = false;
 
+// ==================== 放置區 / 狀態 判斷工具 ====================
 function getPlacement(code) {
   const item = findItem(code);
   return item ? (item['放置區'] || '') : '';
@@ -273,6 +275,7 @@ function shortStatus(item) {
   return STATUS_SHORT[item['狀態']] || item['狀態'] || '';
 }
 
+// ==================== 首頁畫面切換(空白首頁 ↔ 搜尋結果) ====================
 function updateHomeView() {
   const hasQuery = !!(document.getElementById('search').value || '').trim();
   const showResults = hasQuery || activeFilter !== null;
@@ -291,6 +294,7 @@ function setFilter(name) {
   closeDrawer();
 }
 
+// ==================== 最近查詢紀錄 ====================
 const RECENT_KEY = 'recent_codes';
 function getRecent() {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) { return []; }
@@ -327,6 +331,7 @@ document.getElementById('clearRecentBtn').addEventListener('click', function(){
   renderRecent();
 });
 
+// ==================== 首頁快速篩選磁磚(調劑檯/專調檯/兒科檯) ====================
 function startsWithAny(str, prefixes) {
   const s = String(str || '').toUpperCase();
   return prefixes.some(function(p){ return s.startsWith(p); });
@@ -349,6 +354,7 @@ function renderChips() {
 }
 renderChips();
 
+// ==================== 畫面切換 / 錯誤提示 / 登入 ====================
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -377,6 +383,7 @@ document.getElementById('loginBtn').addEventListener('click', () => {
   } catch(e) {}
 })();
 
+// ==================== 資料格式處理工具(物品碼比對、放置區預設值) ====================
 function normalizeCode(code) {
   return String(code || '').replace(/^\*/, '').trim().toLowerCase();
 }
@@ -391,6 +398,7 @@ function displayPlace(item) {
   return validLoc2(item['次料位號']);
 }
 
+// ==================== 從 Google 試算表讀取資料 ====================
 async function fetchData() {
   const statusEl = document.getElementById('statusText');
   statusEl.textContent = '更新中…';
@@ -419,6 +427,7 @@ async function fetchData() {
   updateHomeView();
 }
 
+// ==================== 篩選條件定義、清單排序與渲染 ====================
 const FILTERS = [
   { name: '全部藥品', test: function(d){ return true; } },
   { name: '放置區未設定', test: function(d){ return !displayPlace(d); } },
@@ -487,6 +496,7 @@ document.getElementById('search').addEventListener('input', function(){
   updateHomeView();
 });
 
+// ==================== 選單抽屜(篩選項目、更新、拖曳開合) ====================
 function renderCats() {
   const box = document.getElementById('cats');
   box.innerHTML = '';
@@ -523,6 +533,7 @@ function goHome() {
 document.getElementById('homeBtn').addEventListener('click', goHome);
 document.getElementById('edgeHandle').addEventListener('click', openDrawer);
 
+// ==================== 版本資訊(改版紀錄,手動維護) ====================
 const VERSION_HISTORY = [
  { v: 'v1.3', items: [
     '快速篩選改為調劑檯/專調檯/兒科檯,依料位號自動歸類',
@@ -588,6 +599,7 @@ document.getElementById('versionModalClose').addEventListener('click', function(
   document.getElementById('versionModal').style.display = 'none';
 });
 
+// ==================== 詳細頁(檢視與編輯藥品資料) ====================
 function findItem(code) { return rawData.find(function(d){ return d['物品碼'] === code; }); }
 
 function openDetail(code) {
@@ -672,6 +684,7 @@ function renderDetail() {
   });
 }
 
+// ==================== 寫入資料回 Google 試算表(JSONP,避開 CORS) ====================
 function jsonp(url) {
   return new Promise(function(resolve, reject) {
     const cbName = 'jsonpCb' + Date.now();
@@ -722,11 +735,12 @@ async function saveDetail(fields) {
   }
 }
 
+// ==================== PWA / Service Worker 註冊 ====================
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
 }
 
-// ---- Auto logout after 5 minutes idle ----
+// ==================== 手勢與導覽：閒置自動登出 ====================
 (function() {
   const IDLE_LIMIT = 5 * 60 * 1000;
   let idleTimer = null;
@@ -752,7 +766,7 @@ if ('serviceWorker' in navigator) {
   };
 })();
 
-// ---- Edge swipe: home/results screen drags the drawer open (iOS-style), detail screen goes back ----
+// ==================== 手勢與導覽：左緣滑動(首頁開選單／詳細頁返回) ====================
 (function() {
   let startX = 0, startY = 0, tracking = false, mode = null;
   const EDGE_ZONE = 24;
@@ -816,6 +830,7 @@ if ('serviceWorker' in navigator) {
 })();
 
 // ---- One-time hint for the edge-swipe-to-open-menu gesture ----
+// ==================== 手勢與導覽：首次登入的滑動提示 ====================
 function showSwipeHintOnce() {
   try {
     if (localStorage.getItem('seen_swipe_hint')) return;
@@ -826,7 +841,7 @@ function showSwipeHintOnce() {
   setTimeout(function(){ hint.classList.remove('show'); }, 3500);
 }
 
-// ---- Pull to refresh (home screen only) ----
+// ==================== 手勢與導覽：下拉刷新 ====================
 (function() {
   const indicator = document.getElementById('pullIndicator');
   const pullText = document.getElementById('pullText');
@@ -870,6 +885,8 @@ function showSwipeHintOnce() {
     }
   }, { passive: true });
 })();
+
+// ==================== 手勢與導覽：點頂部狀態列回頂 ====================
 (function() {
   document.getElementById('statusBar').addEventListener('click', function(){
     window.scrollTo({ top: 0, behavior: 'smooth' });
