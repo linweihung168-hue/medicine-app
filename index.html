@@ -13,10 +13,11 @@
 <title>找不到藥</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { overscroll-behavior-y: contain; }
+  html { overscroll-behavior-y: contain; overflow-x: hidden; width: 100%; }
   body {
     margin: 0; font-family: 'Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;
     background: #EFF6FC; color: #042C53; overscroll-behavior-y: contain;
+    overflow-x: hidden; width: 100%;
   }
   .screen { min-height: 100vh; display: none; flex-direction: column; }
   .screen.active { display: flex; }
@@ -24,9 +25,9 @@
   input { font-family: inherit; }
 
   #loginScreen { align-items: center; padding: 64px 28px 32px; }
-  .logo { margin-bottom: 20px; }
-  .title-cn { font-size: 34px; font-weight: 700; letter-spacing: 1px; margin: 0 0 8px; }
-  .title-en { font-size: 12px; color: #185FA5; letter-spacing: 3px; margin: 0 0 44px; }
+  .logo { margin-bottom: 16px; width: 104px; height: 104px; }
+  .title-cn { font-size: 26px; font-weight: 700; letter-spacing: 1px; margin: 0 0 6px; }
+  .title-en { font-size: 11px; color: #185FA5; letter-spacing: 3px; margin: 0 0 40px; }
   .login-card { width: 100%; max-width: 320px; background: rgba(255,255,255,0.75); border-radius: 16px; padding: 4px 18px; }
   .login-row { display: flex; align-items: center; height: 52px; gap: 12px; }
   .login-row span { font-size: 14px; color: #85B7EB; font-weight: 500; width: 32px; flex-shrink: 0; }
@@ -44,7 +45,7 @@
   #list { background: #fff; border-radius: 18px 18px 0 0; padding: 4px 8px; flex: 1; min-height: 55vh; }
   .item-row { padding: 13px 8px; border-bottom: 0.5px solid #eee; }
   .item-row .name-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
-  .item-row .name { margin: 0; font-size: 18px; font-weight: 700; color: #2E4E6B; line-height: 1.35; }
+  .item-row .name { margin: 0; font-size: 18px; font-weight: 700; color: #2E4E6B; line-height: 1.35; overflow-wrap: anywhere; min-width: 0; }
   .item-row .full { margin: 0 0 9px; font-size: 13px; color: #7699B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .tag { font-size: 12px; padding: 2px 8px; border-radius: 8px; flex-shrink: 0; }
@@ -59,10 +60,10 @@
   .item-row.muted .tag-loc { background: #F1EFE8; color: #888780; border-color: #ddd; }
   .tag-status { background: transparent; color: #888780; border: 0.5px solid #ccc; }
 
-  #emptyState { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 56px 24px 0; }
-  #emptyState .brand-logo { width: 60px; height: 60px; margin-bottom: 28px; }
-  .chip-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 18px; }
-  .chip { display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border-radius: 14px; background: #fff; border: 0.5px solid #B5D4F4; font-size: 13px; color: #0C447C; padding: 0; }
+  #emptyState { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 24px 0; }
+  #emptyState .brand-logo { width: 88px; height: 88px; margin-bottom: 24px; }
+  .chip-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .chip { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; border-radius: 16px; background: #fff; border: 0.5px solid #B5D4F4; font-size: 13px; color: #042C53; padding: 0; }
   .chip svg { flex-shrink: 0; }
   .recent-wrap { width: 100%; margin-top: 26px; }
   .recent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -149,7 +150,7 @@
 <body>
 
 <div id="loginScreen" class="screen active">
-  <svg class="logo" width="76" height="76" viewBox="0 0 68 68">
+  <svg class="logo" width="104" height="104" viewBox="0 0 68 68">
     <rect x="4" y="4" width="60" height="60" rx="16" fill="#FBFDFF"/>
     <g transform="translate(30,30) rotate(-35)">
       <rect x="-19" y="-6.5" width="38" height="13" rx="6.5" fill="#85B7EB"/>
@@ -342,7 +343,7 @@ const CHIPS = [
   { name: '高警', label: '高警', color: '#A32D2D', icon: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.71 3.86a2 2 0 0 0-3.42 0z"/>' },
   { name: '抗生', label: '抗生', color: '#185FA5', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
   { name: '危害', label: '危害', color: '#A32D2D', icon: '<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' },
-  { name: '放置區未設定', label: '放置區未設定', color: '#5F5E5A', icon: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><line x1="4" y1="4" x2="20" y2="20"/>' }
+  { name: '放置區未設定', label: '未設定', color: '#5F5E5A', icon: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><line x1="4" y1="4" x2="20" y2="20"/>' }
 ];
 function renderChips() {
   const box = document.getElementById('chipGrid');
@@ -350,8 +351,7 @@ function renderChips() {
   CHIPS.forEach(function(c) {
     const btn = document.createElement('button');
     btn.className = 'chip';
-    btn.style.color = c.color;
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + c.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + c.icon + '</svg><span>' + c.label + '</span>';
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + c.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + c.icon + '</svg><span>' + c.label + '</span>';
     btn.addEventListener('click', function(){ setFilter(c.name); });
     box.appendChild(btn);
   });
