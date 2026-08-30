@@ -35,10 +35,10 @@
   .btn-primary { width: 100%; max-width: 320px; height: 48px; border-radius: 24px; background: #B5D4F4; color: #0C447C; border: none; font-size: 16px; font-weight: 700; margin-top: 22px; }
 
   .topbar { display: flex; align-items: center; gap: 10px; padding: 18px 16px 12px; }
-  .icon-btn { width: 42px; height: 42px; border-radius: 10px; background: #fff; border: 0.5px solid #B5D4F4; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
-  .search-wrap { flex: 1; display: flex; align-items: center; background: #fff; border-radius: 21px; border: 0.5px solid #B5D4F4; height: 42px; padding: 0 14px; gap: 8px; }
+  .icon-btn { width: 52px; height: 52px; border-radius: 14px; background: #fff; border: 0.5px solid #B5D4F4; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
+  .search-wrap { flex: 1; display: flex; align-items: center; background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; height: 52px; padding: 0 16px; gap: 10px; }
   .search-wrap svg { flex-shrink: 0; }
-  #search { flex: 1; height: 100%; border: none; background: transparent; font-size: 15px; outline: none; padding: 0; }
+  #search { flex: 1; height: 100%; border: none; background: transparent; font-size: 16px; outline: none; padding: 0; }
 
   .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 10px; font-size: 11px; color: #7699B8; }
 
@@ -60,11 +60,10 @@
   .item-row.muted .tag-loc { background: #F1EFE8; color: #888780; border-color: #ddd; }
   .tag-status { background: transparent; color: #888780; border: 0.5px solid #ccc; }
 
-  #emptyState { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 24px 0; }
-  #emptyState .brand-logo { width: 88px; height: 88px; margin-bottom: 24px; }
-  .chip-grid { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
-  .chip { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; border-radius: 16px; background: #fff; border: 0.5px solid #B5D4F4; font-size: 13px; color: #042C53; padding: 0; }
-  .chip svg { flex-shrink: 0; }
+  #emptyState { flex: 1; display: flex; flex-direction: column; padding: 0 24px; }
+  #emptyState .empty-center { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .chip-grid { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .chip { height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #fff; border: 0.5px solid #B5D4F4; font-size: 13px; color: #042C53; padding: 0; }
   .recent-wrap { width: 100%; margin-top: 26px; }
   .recent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .recent-head span { font-size: 12px; color: #7699B8; }
@@ -204,28 +203,17 @@
   <div id="swipeHint">向右滑動開啟選單</div>
 
   <div id="emptyState">
-    <svg class="brand-logo" viewBox="0 0 68 68">
-      <rect x="4" y="4" width="60" height="60" rx="16" fill="#FBFDFF"/>
-      <g transform="translate(30,30) rotate(-35)">
-        <rect x="-19" y="-6.5" width="38" height="13" rx="6.5" fill="#85B7EB"/>
-        <rect x="-19" y="-6.5" width="19" height="13" rx="6.5" fill="#0C447C"/>
-        <rect x="-9" y="-6.5" width="9" height="13" fill="#0C447C"/>
-        <path d="M 0 -6.5 L 0 6.5" stroke="#FBFDFF" stroke-width="1.5"/>
-      </g>
-      <g transform="translate(46,46)">
-        <circle r="10" fill="#FBFDFF" stroke="#0C447C" stroke-width="2.2"/>
-        <line x1="7" y1="7" x2="13" y2="13" stroke="#0C447C" stroke-width="2.4" stroke-linecap="round"/>
-      </g>
-    </svg>
-    <div class="chip-grid" id="chipGrid"></div>
-    <div class="recent-wrap">
-      <div class="recent-head">
-        <span>最近查詢</span>
-        <button id="clearRecentBtn" aria-label="清除最近查詢">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
-        </button>
+    <div class="empty-center">
+      <div class="chip-grid" id="chipGrid"></div>
+      <div class="recent-wrap">
+        <div class="recent-head">
+          <span>最近查詢</span>
+          <button id="clearRecentBtn" aria-label="清除最近查詢">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+        <div id="recentList"></div>
       </div>
-      <div id="recentList"></div>
     </div>
   </div>
 
@@ -344,9 +332,9 @@ function startsWithAny(str, prefixes) {
   return prefixes.some(function(p){ return s.startsWith(p); });
 }
 const CHIPS = [
-  { name: '調劑檯', label: '調劑檯', color: '#185FA5', icon: '<path d="M9 3h6"/><path d="M10 3v6l-4.5 8.5A2 2 0 0 0 7.3 21h9.4a2 2 0 0 0 1.8-2.5L14 9V3"/>' },
-  { name: '專調檯', label: '專調檯', color: '#185FA5', icon: '<line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="18" r="2"/>' },
-  { name: '兒科檯', label: '兒科檯', color: '#185FA5', icon: '<path d="M9 2h6"/><path d="M10 2v3.5L8 8v11a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V8l-2-2.5V2"/><line x1="8" y1="12" x2="16" y2="12"/>' }
+  { name: '調劑檯', label: '調劑檯' },
+  { name: '專調檯', label: '專調檯' },
+  { name: '兒科檯', label: '兒科檯' }
 ];
 function renderChips() {
   const box = document.getElementById('chipGrid');
@@ -354,7 +342,7 @@ function renderChips() {
   CHIPS.forEach(function(c) {
     const btn = document.createElement('button');
     btn.className = 'chip';
-    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + c.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + c.icon + '</svg><span>' + c.label + '</span>';
+    btn.innerHTML = '<span>' + c.label + '</span>';
     btn.addEventListener('click', function(){ setFilter(c.name); });
     box.appendChild(btn);
   });
@@ -459,6 +447,9 @@ function currentList() {
   } else {
     items = items.filter(function(d){ return !isDiscontinued(d); });
   }
+  items = items.slice().sort(function(a, b){
+    return String(a['料位號'] || '').localeCompare(String(b['料位號'] || ''), undefined, { numeric: true, sensitivity: 'base' });
+  });
   return items;
 }
 
