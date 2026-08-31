@@ -51,7 +51,7 @@
   .tag { font-size: 12px; padding: 2px 8px; border-radius: 8px; flex-shrink: 0; }
   .tag-code { background: #B5D4F4; color: #0C447C; font-weight: 700; }
   .tag-loc { background: #F1F8FE; color: #185FA5; border: 0.5px solid #B5D4F4; }
-  .tag-place-set { background: #FBF3D9; color: #7A5B06; }
+  .tag-place-set { background: #E3F3E8; color: #1F6B3E; }
   .tag-place-unset { background: #FCEBEB; color: #791F1F; }
   .empty-msg { text-align: center; color: #999; font-size: 13px; padding: 40px 20px; line-height: 1.6; }
 
@@ -145,6 +145,14 @@
   .v-line .dot { flex-shrink: 0; }
   .v-line .txt { flex: 1; }
   .version-box .v-close { margin-top: 14px; width: 100%; height: 42px; border-radius: 21px; background: #B5D4F4; color: #0C447C; border: none; font-size: 15px; font-weight: 700; }
+
+  #aboutModal { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 20; align-items: center; justify-content: center; padding: 24px; }
+  .about-box { background: #fff; border-radius: 16px; padding: 22px 20px; width: 100%; max-width: 300px; text-align: left; }
+  .about-box .a-title { font-size: 16px; font-weight: 700; color: #042C53; margin: 0 0 16px; }
+  .about-box h4 { font-size: 12px; color: #999; margin: 0 0 6px; font-weight: 500; }
+  .about-box p { font-size: 13.5px; color: #333; line-height: 1.6; margin: 0 0 16px; }
+  .about-box a.contact-link { display: flex; align-items: center; gap: 8px; background: #F1F8FE; border: 0.5px solid #B5D4F4; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; color: #185FA5; text-decoration: none; margin-bottom: 14px; }
+  .about-box .a-close { margin-top: 0; width: 100%; height: 42px; border-radius: 21px; background: #B5D4F4; color: #0C447C; border: none; font-size: 15px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -186,6 +194,25 @@
     <p class="v-title">版本資訊</p>
     <div id="versionList"></div>
     <button class="v-close" id="versionModalClose">好</button>
+  </div>
+</div>
+
+<div id="aboutModal">
+  <div class="about-box">
+    <p class="a-title">關於</p>
+
+    <h4>來源</h4>
+    <p>HIS 出入庫系統匯出,由人工同步。無法即時反映 HIS 最新異動,更新時間視匯入頻率而定,可能與正式系統有落差。</p>
+
+    <h4>使用限制</h4>
+    <p>僅供內部查找參考,仍應以現場核對及 HIS 正式系統為準。</p>
+
+    <a class="contact-link" href="https://line.me/ti/p/~cch200184" target="_blank" rel="noopener">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      <span>有問題？加 LINE 聯絡</span>
+    </a>
+
+    <button class="a-close" id="aboutModalClose">好</button>
   </div>
 </div>
 
@@ -249,6 +276,10 @@
   <button class="cat-row" id="versionInfoBtn">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
     <span class="label">版本資訊</span>
+  </button>
+  <button class="cat-row" id="aboutBtn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+    <span class="label">關於</span>
   </button>
 </div>
 
@@ -487,12 +518,12 @@ function renderList() {
     row.className = 'item-row' + (discontinued ? ' muted' : '');
     row.innerHTML =
       '<div class="name-row">' +
-        '<span class="tag tag-code">' + code + '</span>' +
+        '<span class="tag tag-code">' + highlightText(code, q) + '</span>' +
         '<p class="name">' + highlightText(d['俗名'] || '（未命名）', q) + '</p>' +
       '</div>' +
       '<p class="full">' + highlightText(d['品名與內含量'] || '', q) + '</p>' +
       '<div class="tags">' +
-        '<span class="tag tag-loc">' + (d['料位號'] || '未設定') + '</span>' +
+        '<span class="tag tag-loc">' + highlightText(d['料位號'] || '未設定', q) + '</span>' +
         '<span class="tag ' + (place ? 'tag-place-set' : 'tag-place-unset') + '">放置區:' + (place || '尚未設定') + '</span>' +
         (discontinued ? '<span class="tag tag-status">' + shortStatus(d) + '</span>' : '') +
       '</div>';
@@ -621,6 +652,14 @@ document.getElementById('versionInfoBtn').addEventListener('click', function(){
 });
 document.getElementById('versionModalClose').addEventListener('click', function(){
   document.getElementById('versionModal').style.display = 'none';
+});
+
+document.getElementById('aboutBtn').addEventListener('click', function(){
+  document.getElementById('aboutModal').style.display = 'flex';
+  closeDrawer();
+});
+document.getElementById('aboutModalClose').addEventListener('click', function(){
+  document.getElementById('aboutModal').style.display = 'none';
 });
 
 // ==================== 詳細頁(檢視與編輯藥品資料) ====================
