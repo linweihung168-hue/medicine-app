@@ -151,7 +151,10 @@
   .about-box .a-title { font-size: 16px; font-weight: 700; color: #042C53; margin: 0 0 16px; }
   .about-box h4 { font-size: 12px; color: #999; margin: 0 0 6px; font-weight: 500; }
   .about-box p { font-size: 13.5px; color: #333; line-height: 1.6; margin: 0 0 16px; }
-  .about-box a.contact-link { display: flex; align-items: center; gap: 8px; background: #F1F8FE; border: 0.5px solid #B5D4F4; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; color: #185FA5; text-decoration: none; margin-bottom: 14px; }
+  .about-box a.contact-link { display: flex; align-items: center; gap: 12px; background: #06C755; border: none; border-radius: 14px; height: 52px; padding: 0 14px; font-size: 14px; font-weight: 700; color: #fff; text-decoration: none; margin-bottom: 14px; }
+  .about-box a.contact-link .icon-badge { width: 32px; height: 32px; border-radius: 9px; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+  .about-box a.contact-link .icon-badge img { width: 100%; height: 100%; object-fit: cover; }
+  .about-box a.contact-link .contact-text { flex: 1; }
   .about-box .a-close { margin-top: 0; width: 100%; height: 42px; border-radius: 21px; background: #B5D4F4; color: #0C447C; border: none; font-size: 15px; font-weight: 700; }
 </style>
 </head>
@@ -208,8 +211,9 @@
     <p>僅供內部查找參考,仍應以現場核對及 HIS 正式系統為準。</p>
 
     <a class="contact-link" href="https://line.me/ti/p/~cch200184" target="_blank" rel="noopener">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-      <span>有問題？加 LINE 聯絡</span>
+      <span class="icon-badge"><img src="line-icon.png" alt="LINE"></span>
+      <span class="contact-text">有問題請聯絡</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
     </a>
 
     <button class="a-close" id="aboutModalClose">好</button>
