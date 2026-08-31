@@ -47,6 +47,7 @@
   .item-row .name-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
   .item-row .name { margin: 0; font-size: 18px; font-weight: 700; color: #2E4E6B; line-height: 1.35; overflow-wrap: anywhere; min-width: 0; }
   .item-row .full { margin: 0 0 9px; font-size: 13px; color: #7699B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-row .match-hint { margin: -3px 0 9px; font-size: 12.5px; color: #5F5E5A; }
   .tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .tag { font-size: 12px; padding: 2px 8px; border-radius: 8px; flex-shrink: 0; }
   .tag-code { background: #B5D4F4; color: #0C447C; font-weight: 700; }
@@ -504,6 +505,27 @@ function highlightText(text, q) {
   const re = new RegExp('(' + escRegex(q) + ')', 'ig');
   return s.replace(re, '<mark style="background:#FBE9A0;color:inherit;padding:0 1px;border-radius:2px;">$1</mark>');
 }
+function matchedHiddenFieldLine(d, q) {
+  if (!q) return '';
+  const ql = q.toLowerCase();
+  const qNorm = ql.replace(/^\*/, '');
+  const codeNorm = normalizeCode(d['物品碼']);
+  const visibleMatch =
+    (d['俗名']||'').toLowerCase().includes(ql) ||
+    (d['品名與內含量']||'').toLowerCase().includes(ql) ||
+    (String(d['料位號']||'')).toLowerCase().includes(ql) ||
+    codeNorm.includes(qNorm);
+  if (visibleMatch) return '';
+  const generic = d['學名'] || '';
+  if (generic.toLowerCase().includes(ql)) {
+    return '<p class="match-hint">學名:' + highlightText(generic, q) + '</p>';
+  }
+  const loc2 = String(d['次料位號'] || '');
+  if (loc2.toLowerCase().includes(ql)) {
+    return '<p class="match-hint">次料位號:' + highlightText(loc2, q) + '</p>';
+  }
+  return '';
+}
 
 function renderList() {
   const items = currentList();
@@ -526,6 +548,7 @@ function renderList() {
         '<p class="name">' + highlightText(d['俗名'] || '（未命名）', q) + '</p>' +
       '</div>' +
       '<p class="full">' + highlightText(d['品名與內含量'] || '', q) + '</p>' +
+      matchedHiddenFieldLine(d, q) +
       '<div class="tags">' +
         '<span class="tag tag-loc">' + highlightText(d['料位號'] || '未設定', q) + '</span>' +
         '<span class="tag ' + (place ? 'tag-place-set' : 'tag-place-unset') + '">放置區:' + (place || '尚未設定') + '</span>' +
