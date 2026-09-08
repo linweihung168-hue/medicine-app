@@ -611,6 +611,11 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
 
 // ==================== 版本資訊(改版紀錄,手動維護) ====================
 const VERSION_HISTORY = [
+ { v: 'v1.6', items: [
+    '新增 HIS 匯入合併功能,自動同步料位號、狀態等資料',
+    '合併時自動保護放置區與手動修正過的俗名,不被覆蓋',
+    '合併前自動備份資料庫,可隨時還原'
+  ]},
  { v: 'v1.5', items: [
     '搜尋結果,關鍵字用淡黃底標亮',
     '詳細頁存檔成功後,浮出「已儲存」提示'
