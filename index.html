@@ -86,6 +86,8 @@
   .cat-row .n { font-size: 12px; color: #999; }
 
   #edgeHandle { position: fixed; left: 0; top: 50%; transform: translateY(-50%); width: 5px; height: 56px; background: #B5D4F4; border-radius: 0 6px 6px 0; opacity: 0.55; z-index: 5; }
+  #edgeBadge { display: none; position: fixed; left: 2px; top: calc(50% - 36px); min-width: 16px; height: 16px; border-radius: 8px; background: #E23F3F; border: 2px solid #EFF6FC; z-index: 6; align-items: center; justify-content: center; padding: 0 3px; font-size: 10px; color: #fff; font-weight: 700; line-height: 1; }
+  .row-badge { display: none; min-width: 16px; height: 16px; border-radius: 8px; background: #E23F3F; align-items: center; justify-content: center; padding: 0 3px; font-size: 10px; color: #fff; font-weight: 700; line-height: 1; margin-left: auto; }
   #swipeHint { position: fixed; left: 12px; top: 50%; transform: translateY(-50%) translateX(-8px); background: rgba(12,68,124,0.92); color: #fff; font-size: 12px; padding: 8px 12px; border-radius: 8px; white-space: nowrap; z-index: 6; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; }
   #swipeHint.show { opacity: 1; transform: translateY(-50%) translateX(0); }
 
@@ -258,6 +260,7 @@
   </div>
 
   <div id="edgeHandle" aria-hidden="true"></div>
+  <div id="edgeBadge" aria-hidden="true"></div>
   <div id="swipeHint">向右滑動開啟選單</div>
 </div>
 
@@ -278,6 +281,7 @@
   <button class="cat-row" id="drawerRefreshBtn">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
     <span class="label" id="drawerRefreshLabel">更新</span>
+    <span class="row-badge" id="rowBadge"></span>
   </button>
   <button class="cat-row" id="versionInfoBtn">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -293,12 +297,14 @@
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
 const VALID_IDS = ['2690'];
+const APP_BUILD = '2026-09-08a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
 let activeCode = null;
 let editing = false;
 let saving = false;
+let lastMergeTime = '';
 
 // ==================== 放置區 / 狀態 判斷工具 ====================
 const DISCONTINUED_STATUSES = ['已剔除', '暫停使用'];
@@ -390,6 +396,37 @@ function renderChips() {
 }
 renderChips();
 
+// ==================== 更新提示徽章(程式碼有改版 / HIS 合併過) ====================
+const SEEN_BUILD_KEY = 'seen_app_build';
+const SEEN_MERGE_KEY = 'seen_merge_time';
+
+function getUpdateCount() {
+  let count = 0;
+  try {
+    if (localStorage.getItem(SEEN_BUILD_KEY) !== APP_BUILD) count++;
+  } catch(e) {}
+  try {
+    if (lastMergeTime && localStorage.getItem(SEEN_MERGE_KEY) !== lastMergeTime) count++;
+  } catch(e) {}
+  return count;
+}
+function renderUpdateBadge() {
+  const n = getUpdateCount();
+  [document.getElementById('edgeBadge'), document.getElementById('rowBadge')].forEach(function(el){
+    if (!el) return;
+    if (n > 0) { el.style.display = 'flex'; el.textContent = String(n); }
+    else { el.style.display = 'none'; }
+  });
+}
+function markUpdatesSeen() {
+  try {
+    localStorage.setItem(SEEN_BUILD_KEY, APP_BUILD);
+    if (lastMergeTime) localStorage.setItem(SEEN_MERGE_KEY, lastMergeTime);
+  } catch(e) {}
+  renderUpdateBadge();
+}
+renderUpdateBadge();
+
 // ==================== 畫面切換 / 錯誤提示 / 登入 ====================
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -438,19 +475,29 @@ function displayPlace(item) {
 async function fetchData() {
   const statusEl = document.getElementById('statusText');
   statusEl.textContent = '更新中…';
+  let success = false;
   try {
     const res = await fetch(API_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error('連線失敗');
-    const data = await res.json();
-    rawData = data;
-    try { localStorage.setItem('med_data_cache', JSON.stringify(data)); localStorage.setItem('med_data_time', String(Date.now())); } catch(e) {}
+    const payload = await res.json();
+    const rows = Array.isArray(payload) ? payload : (payload.rows || []);
+    const mergeTime = Array.isArray(payload) ? '' : ((payload.meta && payload.meta.mergeTime) || '');
+    rawData = rows;
+    lastMergeTime = mergeTime;
+    try {
+      localStorage.setItem('med_data_cache', JSON.stringify(rows));
+      localStorage.setItem('med_data_time', String(Date.now()));
+      if (mergeTime) localStorage.setItem('last_merge_time_cache', mergeTime);
+    } catch(e) {}
     const now = new Date();
     statusEl.textContent = '已更新 ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+    success = true;
   } catch(err) {
     try {
       const cached = localStorage.getItem('med_data_cache');
       if (cached) {
         rawData = JSON.parse(cached);
+        lastMergeTime = localStorage.getItem('last_merge_time_cache') || '';
         const t = localStorage.getItem('med_data_time');
         statusEl.textContent = t ? ('離線資料（上次更新 ' + new Date(+t).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}) + '）') : '離線資料';
       } else {
@@ -461,6 +508,8 @@ async function fetchData() {
   renderCats();
   renderList();
   updateHomeView();
+  renderUpdateBadge();
+  return success;
 }
 
 // ==================== 篩選條件定義、清單排序與渲染 ====================
@@ -593,8 +642,9 @@ document.getElementById('overlay').addEventListener('click', closeDrawer);
 document.getElementById('drawerRefreshBtn').addEventListener('click', function(){
   const label = document.getElementById('drawerRefreshLabel');
   label.textContent = '更新中…';
-  fetchData().then(function(){
+  fetchData().then(function(success){
     label.textContent = '更新';
+    if (success) markUpdatesSeen();
     closeDrawer();
   });
 });
@@ -949,9 +999,10 @@ function showSwipeHintOnce() {
       indicator.classList.add('loading');
       pullText.textContent = '更新中…';
       indicator.style.height = '48px';
-      fetchData().then(function() {
+      fetchData().then(function(success) {
         indicator.classList.remove('loading');
         indicator.style.height = '0px';
+        if (success) markUpdatesSeen();
       });
     } else {
       indicator.style.height = '0px';
