@@ -891,31 +891,49 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
 }
 
-// ==================== 手勢與導覽：左緣滑動(首頁開選單／詳細頁返回) ====================
+// ==================== 手勢與導覽：左緣滑動(首頁開關選單／詳細頁返回) ====================
 (function() {
-  let startX = 0, startY = 0, tracking = false, mode = null;
+  let startX = 0, startY = 0, tracking = false, mode = null, wasOpen = false;
   const EDGE_ZONE = 24;
   const BACK_THRESHOLD = 80;
   const DRAWER_WIDTH = 250;
-  const OPEN_THRESHOLD = 100;
   const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
+
+  function snapTo(open) {
+    drawer.classList.remove('dragging');
+    overlay.classList.remove('dragging');
+    drawer.style.transform = '';
+    overlay.style.opacity = '';
+    if (open) { drawer.classList.add('open'); overlay.classList.add('open'); }
+    else { drawer.classList.remove('open'); overlay.classList.remove('open'); }
+  }
 
   document.addEventListener('touchstart', function(e) {
     const homeActive = document.getElementById('homeScreen').classList.contains('active');
     const detailActive = document.getElementById('detailScreen').classList.contains('active');
     if (!homeActive && !detailActive) return;
     const t = e.touches[0];
-    if (t.clientX > EDGE_ZONE) return;
-    if (homeActive && drawer.classList.contains('open')) return;
-    startX = t.clientX;
-    startY = t.clientY;
-    tracking = true;
-    mode = homeActive ? 'drawer' : 'back';
-    if (mode === 'drawer') {
-      drawer.classList.add('dragging');
-      overlay.classList.add('dragging', 'open');
+
+    if (detailActive) {
+      if (t.clientX > EDGE_ZONE) return;
+      mode = 'back';
+      startX = t.clientX; startY = t.clientY; tracking = true;
+      return;
     }
+
+    // homeActive：選單關閉時只能從左緣滑開；已打開時,面板範圍內任何位置都能滑動關閉
+    const isOpen = drawer.classList.contains('open');
+    if (isOpen) {
+      if (t.clientX > DRAWER_WIDTH) return; // 觸控點不在選單面板上,交給遮罩點擊處理
+    } else {
+      if (t.clientX > EDGE_ZONE) return;
+    }
+    mode = 'drawer';
+    wasOpen = isOpen;
+    startX = t.clientX; startY = t.clientY; tracking = true;
+    drawer.classList.add('dragging');
+    overlay.classList.add('dragging', 'open');
   }, { passive: true });
 
   document.addEventListener('touchmove', function(e) {
@@ -932,25 +950,28 @@ if ('serviceWorker' in navigator) {
       return;
     }
 
-    if (dy > 60 && dy > dx) { tracking = false; drawer.classList.remove('dragging'); overlay.classList.remove('dragging', 'open'); return; }
-    if (dx <= 0) return;
+    // mode === 'drawer'：垂直手勢(可能是想滾動畫面)→ 取消,並強制歸位到手勢開始前的狀態,不會卡在中間
+    if (dy > 60 && dy > Math.abs(dx)) {
+      tracking = false;
+      snapTo(wasOpen);
+      return;
+    }
     if (e.cancelable) e.preventDefault();
-    const clamped = Math.min(dx, DRAWER_WIDTH);
-    drawer.style.transform = 'translateX(' + (clamped - DRAWER_WIDTH) + 'px)';
-    overlay.style.opacity = String(Math.min(clamped / DRAWER_WIDTH, 1));
+    const base = wasOpen ? DRAWER_WIDTH : 0;
+    const current = Math.max(0, Math.min(base + dx, DRAWER_WIDTH));
+    drawer.style.transform = 'translateX(' + (current - DRAWER_WIDTH) + 'px)';
+    overlay.style.opacity = String(current / DRAWER_WIDTH);
   }, { passive: false });
 
   document.addEventListener('touchend', function(e) {
     if (!tracking) return;
     tracking = false;
     if (mode !== 'drawer') return;
-    drawer.classList.remove('dragging');
-    overlay.classList.remove('dragging');
-    drawer.style.transform = '';
-    overlay.style.opacity = '';
     const t = e.changedTouches[0];
     const dx = t.clientX - startX;
-    if (dx > OPEN_THRESHOLD) openDrawer(); else closeDrawer();
+    const base = wasOpen ? DRAWER_WIDTH : 0;
+    const current = Math.max(0, Math.min(base + dx, DRAWER_WIDTH));
+    snapTo(current > DRAWER_WIDTH / 2);
   }, { passive: true });
 })();
 
