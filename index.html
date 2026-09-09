@@ -446,6 +446,7 @@ document.getElementById('loginBtn').addEventListener('click', () => {
   if (!VALID_IDS.includes(id)) { showErrModal('代號錯誤，無法登入'); return; }
   try { localStorage.setItem('emp_id', id); } catch(e) {}
   showScreen('homeScreen');
+  updateHomeView();
   fetchData();
   showSwipeHintOnce();
 });
