@@ -92,6 +92,8 @@
   #swipeHint.show { opacity: 1; transform: translateY(-50%) translateX(0); }
 
   #detailScreen { background: #fff; }
+  #detailScreen.overlay-drag { position: fixed; inset: 0; z-index: 15; transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+  #detailScreen.overlay-drag.dragging-live { transition: none; }
   #saveToast { position: fixed; top: 14px; left: 50%; transform: translateX(-50%) translateY(-40px); background: #185FA5; color: #fff; font-size: 13px; padding: 8px 18px; border-radius: 20px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; white-space: nowrap; z-index: 25; }
   #saveToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .detail-top { display: flex; align-items: center; gap: 10px; padding: 16px; border-bottom: 0.5px solid #eee; }
@@ -891,14 +893,15 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
 }
 
-// ==================== 手勢與導覽：左緣滑動(首頁開關選單／詳細頁返回) ====================
+// ==================== 手勢與導覽：左緣滑動(首頁開關選單／詳細頁跟手返回) ====================
 (function() {
   let startX = 0, startY = 0, tracking = false, mode = null, wasOpen = false;
   const EDGE_ZONE = 24;
-  const BACK_THRESHOLD = 80;
   const DRAWER_WIDTH = 250;
   const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
+  const detailScreen = document.getElementById('detailScreen');
+  const homeScreenEl = document.getElementById('homeScreen');
 
   function snapTo(open) {
     drawer.classList.remove('dragging');
@@ -909,9 +912,29 @@ if ('serviceWorker' in navigator) {
     else { drawer.classList.remove('open'); overlay.classList.remove('open'); }
   }
 
+  function finishBack(complete) {
+    detailScreen.classList.remove('dragging-live');
+    if (complete) {
+      detailScreen.style.transform = 'translateX(100%)';
+      setTimeout(function(){
+        showScreen('homeScreen');
+        detailScreen.classList.remove('overlay-drag');
+        detailScreen.style.transform = '';
+        renderList();
+      }, 300);
+    } else {
+      detailScreen.style.transform = 'translateX(0)';
+      setTimeout(function(){
+        detailScreen.classList.remove('overlay-drag');
+        detailScreen.style.transform = '';
+        homeScreenEl.classList.remove('active');
+      }, 300);
+    }
+  }
+
   document.addEventListener('touchstart', function(e) {
-    const homeActive = document.getElementById('homeScreen').classList.contains('active');
-    const detailActive = document.getElementById('detailScreen').classList.contains('active');
+    const homeActive = homeScreenEl.classList.contains('active');
+    const detailActive = detailScreen.classList.contains('active');
     if (!homeActive && !detailActive) return;
     const t = e.touches[0];
 
@@ -919,6 +942,8 @@ if ('serviceWorker' in navigator) {
       if (t.clientX > EDGE_ZONE) return;
       mode = 'back';
       startX = t.clientX; startY = t.clientY; tracking = true;
+      homeScreenEl.classList.add('active');
+      detailScreen.classList.add('overlay-drag', 'dragging-live');
       return;
     }
 
@@ -943,10 +968,15 @@ if ('serviceWorker' in navigator) {
     const dy = Math.abs(t.clientY - startY);
 
     if (mode === 'back') {
-      if (dx > BACK_THRESHOLD && dy < 60) {
+      if (dy > 60 && dy > Math.abs(dx)) {
         tracking = false;
-        document.getElementById('backBtn').click();
+        finishBack(false);
+        return;
       }
+      if (dx <= 0) return;
+      if (e.cancelable) e.preventDefault();
+      const clamped = Math.min(dx, window.innerWidth);
+      detailScreen.style.transform = 'translateX(' + clamped + 'px)';
       return;
     }
 
@@ -966,6 +996,14 @@ if ('serviceWorker' in navigator) {
   document.addEventListener('touchend', function(e) {
     if (!tracking) return;
     tracking = false;
+
+    if (mode === 'back') {
+      const t = e.changedTouches[0];
+      const dx = Math.max(0, t.clientX - startX);
+      finishBack(dx > window.innerWidth / 2);
+      return;
+    }
+
     if (mode !== 'drawer') return;
     const t = e.changedTouches[0];
     const dx = t.clientX - startX;
