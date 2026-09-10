@@ -893,6 +893,8 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
 }
 
+let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢進行中時設為 true,讓下拉刷新知道要先讓路,不要搶著觸發
+
 // ==================== 手勢與導覽：左緣滑動(首頁開關選單／詳細頁跟手返回) ====================
 (function() {
   let startX = 0, startY = 0, tracking = false, mode = null, wasOpen = false;
@@ -942,6 +944,7 @@ if ('serviceWorker' in navigator) {
       if (t.clientX > EDGE_ZONE) return;
       mode = 'back';
       startX = t.clientX; startY = t.clientY; tracking = true;
+      edgeGestureActive = true;
       homeScreenEl.classList.add('active');
       detailScreen.classList.add('overlay-drag', 'dragging-live');
       return;
@@ -957,6 +960,7 @@ if ('serviceWorker' in navigator) {
     mode = 'drawer';
     wasOpen = isOpen;
     startX = t.clientX; startY = t.clientY; tracking = true;
+    edgeGestureActive = true;
     drawer.classList.add('dragging');
     overlay.classList.add('dragging', 'open');
   }, { passive: true });
@@ -970,6 +974,7 @@ if ('serviceWorker' in navigator) {
     if (mode === 'back') {
       if (dy > 60 && dy > Math.abs(dx)) {
         tracking = false;
+        edgeGestureActive = false;
         finishBack(false);
         return;
       }
@@ -983,6 +988,7 @@ if ('serviceWorker' in navigator) {
     // mode === 'drawer'：垂直手勢(可能是想滾動畫面)→ 取消,並強制歸位到手勢開始前的狀態,不會卡在中間
     if (dy > 60 && dy > Math.abs(dx)) {
       tracking = false;
+      edgeGestureActive = false;
       snapTo(wasOpen);
       return;
     }
@@ -996,6 +1002,7 @@ if ('serviceWorker' in navigator) {
   document.addEventListener('touchend', function(e) {
     if (!tracking) return;
     tracking = false;
+    edgeGestureActive = false;
 
     if (mode === 'back') {
       const t = e.changedTouches[0];
@@ -1034,6 +1041,7 @@ function showSwipeHintOnce() {
 
   document.addEventListener('touchstart', function(e) {
     if (!document.getElementById('homeScreen').classList.contains('active')) return;
+    if (edgeGestureActive) return;
     if (window.scrollY > 0) return;
     startY = e.touches[0].clientY;
     pulling = true;
