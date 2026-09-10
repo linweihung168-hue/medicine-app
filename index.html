@@ -772,8 +772,8 @@ function renderDetail() {
   const tagsHtml = tags.map(function(t){ return '<span class="tag" style="background:#F1EFE8;color:#5F5E5A;">' + t + '</span>'; }).join(' ');
 
   function esc(v) { return String(v || '').replace(/"/g, '&quot;'); }
-  function field(label, key, value, sub) {
-    if (editing) {
+  function field(label, key, value, sub, readonly) {
+    if (editing && !readonly) {
       return '<div class="field"><label>' + label + '</label><input id="f_' + key + '" value="' + esc(value) + '"></div>';
     }
     return '<div class="field"><label>' + label + '</label><div class="value' + (sub ? ' sub' : '') + '">' + (value || '（未填寫）') + '</div></div>';
@@ -781,14 +781,14 @@ function renderDetail() {
 
   body.innerHTML =
     field('俗名', 'alias', item['俗名']) +
-    field('品名與內含量', 'full', item['品名與內含量'], true) +
-    field('學名', 'generic', item['學名'], true) +
+    field('品名與內含量', 'full', item['品名與內含量'], true, true) +
+    field('學名', 'generic', item['學名'], true, true) +
     '<div class="divider"></div>' +
     '<div class="field"><label>物品碼</label><div class="value">' + item['物品碼'] + '</div></div>' +
-    field('料位號', 'loc', item['料位號']) +
-    (editing || loc2 ? field('次料位號', 'loc2', item['次料位號']) : '') +
+    field('料位號', 'loc', item['料位號'], false, true) +
+    (loc2 ? field('次料位號', 'loc2', item['次料位號'], false, true) : '') +
     (tags.length ? '<div class="field"><label>狀態標籤</label><div class="tag-row-detail">' + tagsHtml + '</div></div>' : '') +
-    (editing || item['備註'] ? field('備註', 'note', item['備註'], true) : '') +
+    (item['備註'] ? field('備註', 'note', item['備註'], true, true) : '') +
     '<div class="divider"></div>' +
     '<div class="field">' +
       '<label>放置區</label>' +
@@ -808,15 +808,8 @@ function renderDetail() {
     } else {
       const fields = {
         '俗名': document.getElementById('f_alias').value.trim(),
-        '品名與內含量': document.getElementById('f_full').value.trim(),
-        '學名': document.getElementById('f_generic').value.trim(),
-        '料位號': document.getElementById('f_loc').value.trim(),
         '放置區': document.getElementById('f_place').value.trim()
       };
-      const loc2El = document.getElementById('f_loc2');
-      if (loc2El) fields['次料位號'] = loc2El.value.trim();
-      const noteEl = document.getElementById('f_note');
-      if (noteEl) fields['備註'] = noteEl.value.trim();
       saveDetail(fields);
     }
   });
