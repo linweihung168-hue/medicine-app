@@ -1,5 +1,5 @@
-const CACHE_NAME = 'find-medicine-v6';
-const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './line-icon.png'];
+const CACHE_NAME = 'find-medicine-v7';
+const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './line-icon.png', './logo-transparent.png'];
 const FETCH_TIMEOUT = 3000; // 網路太慢時,等這麼久就直接用快取,不要一直卡著
 
 self.addEventListener('install', (e) => {
