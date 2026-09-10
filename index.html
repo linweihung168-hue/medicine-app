@@ -25,7 +25,7 @@
   input { font-family: inherit; }
 
   #loginScreen { align-items: center; padding: 64px 28px 32px; }
-  .logo { margin-bottom: 16px; width: 104px; height: 104px; }
+  .logo { margin-bottom: 16px; width: 104px; height: 104px; object-fit: contain; }
   .title-cn { font-size: 26px; font-weight: 700; letter-spacing: 1px; margin: 0 0 6px; }
   .title-en { font-size: 11px; color: #185FA5; letter-spacing: 3px; margin: 0 0 40px; }
   .login-card { width: 100%; max-width: 320px; background: rgba(255,255,255,0.75); border-radius: 16px; padding: 4px 18px; }
@@ -167,19 +167,7 @@
 <body>
 
 <div id="loginScreen" class="screen active">
-  <svg class="logo" width="104" height="104" viewBox="0 0 68 68">
-    <rect x="4" y="4" width="60" height="60" rx="16" fill="#FBFDFF"/>
-    <g transform="translate(30,30) rotate(-35)">
-      <rect x="-19" y="-6.5" width="38" height="13" rx="6.5" fill="#85B7EB"/>
-      <rect x="-19" y="-6.5" width="19" height="13" rx="6.5" fill="#0C447C"/>
-      <rect x="-9" y="-6.5" width="9" height="13" fill="#0C447C"/>
-      <path d="M 0 -6.5 L 0 6.5" stroke="#FBFDFF" stroke-width="1.5"/>
-    </g>
-    <g transform="translate(46,46)">
-      <circle r="10" fill="#FBFDFF" stroke="#0C447C" stroke-width="2.2"/>
-      <line x1="7" y1="7" x2="13" y2="13" stroke="#0C447C" stroke-width="2.4" stroke-linecap="round"/>
-    </g>
-  </svg>
+  <img class="logo" src="logo-new.png" alt="找不到藥" width="104" height="104">
   <p class="title-cn">找不到藥</p>
   <p class="title-en">FIND MEDICINE</p>
   <div class="login-card">
