@@ -24,21 +24,11 @@
   button { font-family: inherit; cursor: pointer; }
   input { font-family: inherit; }
 
-  #loginScreen { align-items: center; padding: 64px 28px 32px; }
-  .logo { margin-bottom: 16px; width: 104px; height: 104px; object-fit: contain; }
-  .title-cn { font-size: 26px; font-weight: 700; letter-spacing: 1px; margin: 0 0 6px; }
-  .title-en { font-size: 11px; color: #185FA5; letter-spacing: 3px; margin: 0 0 40px; }
-  .login-card { width: 100%; max-width: 320px; background: rgba(255,255,255,0.75); border-radius: 16px; padding: 4px 18px; }
-  .login-row { display: flex; align-items: center; height: 52px; gap: 12px; }
-  .login-row span { font-size: 14px; color: #85B7EB; font-weight: 500; width: 32px; flex-shrink: 0; }
-  .login-row input { flex: 1; height: 100%; border: none; background: transparent; font-size: 16px; outline: none; }
-  .btn-primary { width: 100%; max-width: 320px; height: 48px; border-radius: 24px; background: #B5D4F4; color: #0C447C; border: none; font-size: 16px; font-weight: 700; margin-top: 22px; }
-
   .topbar { display: flex; align-items: center; gap: 10px; padding: 18px 16px 12px; }
   .icon-btn { width: 52px; height: 52px; border-radius: 14px; background: #fff; border: 0.5px solid #B5D4F4; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
   .search-wrap { flex: 1; display: flex; align-items: center; background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; height: 52px; padding: 0 16px; gap: 10px; }
   .search-wrap svg { flex-shrink: 0; }
-  #search { flex: 1; height: 100%; border: none; background: transparent; font-size: 16px; outline: none; padding: 0; }
+  #search { flex: 1; height: 100%; border: none; background: transparent; font-size: 17px; outline: none; padding: 0; }
 
   .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 10px; font-size: 11px; color: #7699B8; }
 
@@ -63,7 +53,7 @@
 
   #emptyState { display: flex; flex-direction: column; padding: 20px 24px 0; }
   .chip-grid { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .chip { height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #fff; border: 0.5px solid #B5D4F4; font-size: 14px; font-weight: 700; color: #0C447C; padding: 0; }
+  .chip { height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #fff; border: 0.5px solid #B5D4F4; font-size: 16px; font-weight: 700; color: #0C447C; padding: 0; }
   .recent-wrap { width: 100%; margin-top: 26px; }
   .recent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .recent-head span { font-size: 12px; color: #7699B8; }
@@ -82,8 +72,8 @@
   #drawer.dragging { transition: none; }
   .cat-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: transparent; border: none; text-align: left; }
   .cat-row.active { background: #E6F1FB; }
-  .cat-row .label { flex: 1; font-size: 14px; color: #2E4E6B; }
-  .cat-row .n { font-size: 12px; color: #999; }
+  .cat-row .label { flex: 1; font-size: 17px; color: #2E4E6B; }
+  .cat-row .n { font-size: 14px; color: #999; }
 
   #edgeHandle { position: fixed; left: 0; top: 50%; transform: translateY(-50%); width: 5px; height: 56px; background: #B5D4F4; border-radius: 0 6px 6px 0; opacity: 0.55; z-index: 5; }
   #edgeBadge { display: none; position: fixed; left: 2px; top: calc(50% - 36px); min-width: 16px; height: 16px; border-radius: 8px; background: #E23F3F; border: 2px solid #EFF6FC; z-index: 6; align-items: center; justify-content: center; padding: 0 3px; font-size: 10px; color: #fff; font-weight: 700; line-height: 1; }
@@ -166,19 +156,6 @@
 </head>
 <body>
 
-<div id="loginScreen" class="screen active">
-  <img class="logo" src="acorn-transparent.png" alt="找不到藥" width="104" height="104">
-  <p class="title-cn">找不到藥</p>
-  <p class="title-en">FIND MEDICINE</p>
-  <div class="login-card">
-    <div class="login-row">
-      <span>ID</span>
-      <input id="empId" type="text" placeholder="部門代號" autocomplete="off">
-    </div>
-  </div>
-  <button class="btn-primary" id="loginBtn">登入</button>
-</div>
-
 <div id="errModal">
   <div class="modal-box">
     <p id="errModalMsg"></p>
@@ -214,7 +191,7 @@
   </div>
 </div>
 
-<div id="homeScreen" class="screen">
+<div id="homeScreen" class="screen active">
   <div id="homeInner" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
     <div class="topbar">
       <button class="icon-btn" id="homeBtn" aria-label="回首頁">
@@ -286,7 +263,6 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const VALID_IDS = ['2690'];
 const APP_BUILD = '2026-09-08a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
@@ -429,23 +405,6 @@ function showErrModal(msg) {
 document.getElementById('errModalOk').addEventListener('click', () => {
   document.getElementById('errModal').style.display = 'none';
 });
-
-document.getElementById('loginBtn').addEventListener('click', () => {
-  const id = document.getElementById('empId').value.trim();
-  if (!id) { showErrModal('請先輸入部門代號'); return; }
-  if (!VALID_IDS.includes(id)) { showErrModal('代號錯誤，無法登入'); return; }
-  try { localStorage.setItem('emp_id', id); } catch(e) {}
-  showScreen('homeScreen');
-  updateHomeView();
-  fetchData();
-  showSwipeHintOnce();
-});
-(function autoLogin() {
-  try {
-    const saved = localStorage.getItem('emp_id');
-    if (saved) document.getElementById('empId').value = saved;
-  } catch(e) {}
-})();
 
 // ==================== 資料格式處理工具(物品碼比對、放置區預設值) ====================
 function normalizeCode(code) {
@@ -1053,6 +1012,12 @@ function showSwipeHintOnce() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 })();
+
+// ==================== App 啟動:直接進首頁,沒有登入畫面 ====================
+showScreen('homeScreen');
+updateHomeView();
+fetchData();
+showSwipeHintOnce();
 </script>
 </body>
 </html>
