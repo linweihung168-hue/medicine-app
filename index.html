@@ -464,14 +464,12 @@ async function fetchData() {
 
 // ==================== 篩選條件定義、清單排序與渲染 ====================
 const FILTERS = [
-  { name: '放置區未設定', test: function(d){ return !displayPlace(d); } },
   { name: '調劑檯', test: function(d){ return startsWithAny(d['料位號'], ['GZ', 'GX', 'GY']); } },
   { name: '專調檯', test: function(d){ return startsWithAny(d['料位號'], ['LX', 'LZ', 'LYA', 'LYB']); } },
   { name: '兒科檯', test: function(d){ return startsWithAny(d['料位號'], ['PX', 'PZ']); } }
 ];
 const MENU_GROUPS = [
-  ['調劑檯', '專調檯', '兒科檯'],
-  ['放置區未設定']
+  ['調劑檯', '專調檯', '兒科檯']
 ];
 
 function currentList() {
