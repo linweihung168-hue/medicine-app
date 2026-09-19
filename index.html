@@ -52,7 +52,7 @@
   .tag-status { background: transparent; color: #888780; border: 0.5px solid #ccc; }
 
   #emptyState { display: flex; flex-direction: column; padding: 20px 24px 0; }
-  .chip-grid { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .chip-grid { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .chip { height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #fff; border: 0.5px solid #B5D4F4; font-size: 16px; font-weight: 700; color: #0C447C; padding: 0; }
   .recent-wrap { width: 100%; margin-top: 26px; }
   .recent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -347,7 +347,8 @@ function startsWithAny(str, prefixes) {
 const CHIPS = [
   { name: '調劑檯', label: '調劑檯' },
   { name: '專調檯', label: '專調檯' },
-  { name: '兒科檯', label: '兒科檯' }
+  { name: '兒科檯', label: '兒科檯' },
+  { name: '急診檯', label: '急診檯' }
 ];
 function renderChips() {
   const box = document.getElementById('chipGrid');
@@ -466,10 +467,15 @@ async function fetchData() {
 const FILTERS = [
   { name: '調劑檯', test: function(d){ return startsWithAny(d['料位號'], ['GZ', 'GX', 'GY']); } },
   { name: '專調檯', test: function(d){ return startsWithAny(d['料位號'], ['LX', 'LZ', 'LYA', 'LYB']); } },
-  { name: '兒科檯', test: function(d){ return startsWithAny(d['料位號'], ['PX', 'PZ']); } }
+  { name: '兒科檯', test: function(d){ return startsWithAny(d['料位號'], ['PX', 'PZ']); } },
+  { name: '急診檯', test: function(d){ return startsWithAny(d['料位號'], ['AZ', 'BX', 'BY', 'BZ', 'CX', 'CY', 'CZ', 'ZE']); } },
+  { name: '覆核發藥檯', test: function(d){ return startsWithAny(d['料位號'], ['KX', 'KZ']); } },
+  { name: '諮詢檯', test: function(d){ return String(d['料位號'] || '').trim() === '諮詢'; } },
+  { name: '冰箱藥品', test: function(d){ return startsWithAny(d['料位號'], ['RA', 'RB', 'RC']); } }
 ];
 const MENU_GROUPS = [
-  ['調劑檯', '專調檯', '兒科檯']
+  ['調劑檯', '專調檯', '兒科檯', '急診檯'],
+  ['覆核發藥檯', '諮詢檯', '冰箱藥品']
 ];
 
 function currentList() {
