@@ -145,6 +145,7 @@
   #aboutModal { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 20; align-items: center; justify-content: center; padding: 24px; }
   .about-box { background: #fff; border-radius: 16px; padding: 22px 20px; width: 100%; max-width: 300px; max-height: 80vh; overflow-y: auto; text-align: left; }
   .about-box .a-title { font-size: 16px; font-weight: 700; color: #2E4E6B; margin: 0 0 16px; }
+  .about-box .sync-badge { display: inline-block; background: #F1F8FE; border: 0.5px solid #B5D4F4; color: #185FA5; font-size: 12.5px; padding: 5px 12px; border-radius: 10px; margin-bottom: 16px; }
   .about-box h4 { font-size: 12px; color: #999; margin: 0 0 6px; font-weight: 500; }
   .about-box p { font-size: 13.5px; color: #333; line-height: 1.6; margin: 0 0 16px; }
   .about-box a.contact-link { display: flex; align-items: center; gap: 12px; background: #2BC96C; border: none; border-radius: 14px; height: 52px; padding: 0 14px; font-size: 14px; font-weight: 700; color: #fff; text-decoration: none; margin-bottom: 14px; }
@@ -174,6 +175,8 @@
 <div id="aboutModal">
   <div class="about-box">
     <p class="a-title">關於</p>
+
+    <div class="sync-badge" id="syncBadge"></div>
 
     <h4>來源</h4>
     <p>HIS 出入庫系統匯出,由人工同步。無法即時反映 HIS 最新異動,更新時間視匯入頻率而定,可能與正式系統有落差。</p>
@@ -680,7 +683,18 @@ document.getElementById('versionModalClose').addEventListener('click', function(
   document.getElementById('versionModal').style.display = 'none';
 });
 
+function formatSyncDate() {
+  if (!lastMergeTime) return '資料庫最後更新：尚無紀錄';
+  const d = new Date(lastMergeTime);
+  if (isNaN(d.getTime())) return '資料庫最後更新：尚無紀錄';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return '資料庫最後更新：' + y + '-' + m + '-' + day;
+}
+
 document.getElementById('aboutBtn').addEventListener('click', function(){
+  document.getElementById('syncBadge').textContent = formatSyncDate();
   document.getElementById('aboutModal').style.display = 'flex';
   closeDrawer();
 });
