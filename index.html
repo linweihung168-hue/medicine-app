@@ -92,6 +92,9 @@
   #scanInput:focus { border-color: #185FA5; }
   .scan-tools { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #7699B8; margin-top: -6px; }
   #scanManualBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
+  .scan-tools2 { display: flex; gap: 8px; align-items: center; margin-top: -4px; }
+  #scanVoiceSel { flex: 1; min-width: 0; height: 36px; border-radius: 10px; border: 0.5px solid #B5D4F4; background: #fff; color: #2E4E6B; font-size: 13px; padding: 0 8px; }
+  #scanTwiceBtn { flex-shrink: 0; height: 36px; background: #fff; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 10px; font-size: 13px; padding: 0 12px; }
   #scanResult { background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; padding: 22px 18px; min-height: 130px; display: flex; flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
   #scanResult .loc { font-size: 38px; font-weight: 800; color: #0C447C; letter-spacing: 1px; overflow-wrap: anywhere; }
   #scanResult .nm { font-size: 22px; font-weight: 700; color: #2E4E6B; overflow-wrap: anywhere; }
@@ -279,6 +282,10 @@
     <button id="scanStartBtn">開始掃碼</button>
     <input id="scanInput" type="text" inputmode="none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
     <div class="scan-tools"><span id="scanLockMsg"></span><button id="scanManualBtn">手動輸入測試</button></div>
+    <div class="scan-tools2">
+      <select id="scanVoiceSel" aria-label="語音選擇"></select>
+      <button id="scanTwiceBtn">唸兩次:開</button>
+    </div>
     <div id="scanResult"><div class="hint">按「開始掃碼」後,掃描藥袋上的 QR Code</div></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
     <div id="scanHistory"></div>
@@ -707,21 +714,78 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
            rawData.find(function(d){ return normalizeCode(d['物品碼']) === c2; });
   }
 
-  function pickVoice() {
-    if (!window.speechSynthesis) return null;
-    const vs = speechSynthesis.getVoices().filter(function(v){ return /^zh/i.test(v.lang.replace('_','-')); });
-    const tw = vs.filter(function(v){ return /tw|hant|hk/i.test(v.lang); });
-    const pool = tw.length ? tw : vs;
-    return pool.find(function(v){ return v.localService; }) || pool[0] || null; // 優先用手機本機語音(離線可用)
+  function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  const voiceSel = document.getElementById('scanVoiceSel');
+  const twiceBtn = document.getElementById('scanTwiceBtn');
+  let twice = lsGet('scan_twice', '1') === '1';
+  let speakToken = 0;
+
+  function langOf(v) { return String(v.lang || '').replace('_', '-').toLowerCase(); }
+  function isCantonese(v) { const l = langOf(v); return /yue|hk|zh-hk/.test(l) || /粵|廣東|cantonese|香港/i.test(v.name || ''); }
+  function zhVoices() {
+    if (!window.speechSynthesis) return [];
+    return speechSynthesis.getVoices().filter(function(v){ return /^(zh|cmn|yue)/.test(langOf(v)); });
   }
-  function speak(text) {
-    if (!window.speechSynthesis) return;
-    speechSynthesis.cancel();
+  // 自動選語音:台灣國語優先 → 其他國語 → 都沒有就只指定 zh-TW 讓系統自己選。永遠排除粵語/香港。
+  function autoVoice() {
+    const ok = zhVoices().filter(function(v){ return !isCantonese(v); });
+    const tw = ok.filter(function(v){ return /tw|hant/.test(langOf(v)); });
+    const pool = tw.length ? tw : ok;
+    return pool.find(function(v){ return v.localService; }) || pool[0] || null;
+  }
+  function pickVoice() {
+    const saved = lsGet('scan_voice', '');
+    if (saved) {
+      const hit = zhVoices().find(function(v){ return v.voiceURI === saved || v.name === saved; });
+      if (hit) return hit;
+    }
+    return autoVoice();
+  }
+  function fillVoiceSel() {
+    const vs = zhVoices();
+    const saved = lsGet('scan_voice', '');
+    voiceSel.innerHTML = '<option value="">語音:自動(台灣國語)</option>';
+    vs.forEach(function(v) {
+      const o = document.createElement('option');
+      o.value = v.voiceURI || v.name;
+      o.textContent = v.name + '(' + v.lang + ')' + (isCantonese(v) ? ' 粵語' : '');
+      voiceSel.appendChild(o);
+    });
+    voiceSel.value = saved;
+    if (voiceSel.value !== saved) voiceSel.value = '';
+  }
+  function utter(text) {
     const u = new SpeechSynthesisUtterance(text);
     const v = pickVoice();
     if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = 'zh-TW'; }
     u.rate = 0.9;
-    speechSynthesis.speak(u);
+    return u;
+  }
+  function speak(text) {
+    if (!window.speechSynthesis) return;
+    const token = ++speakToken; // 有新的掃描或點擊時,舊的(含第二次)就不再唸
+    speechSynthesis.cancel();
+    const u1 = utter(text);
+    if (twice) {
+      u1.onend = function() {
+        setTimeout(function() { if (token === speakToken) speechSynthesis.speak(utter(text)); }, 900);
+      };
+    }
+    speechSynthesis.speak(u1);
+  }
+  voiceSel.addEventListener('change', function() {
+    lsSet('scan_voice', voiceSel.value);
+    speak('愛舒疼錠');
+  });
+  function showTwice() { twiceBtn.textContent = '唸兩次:' + (twice ? '開' : '關'); }
+  twiceBtn.addEventListener('click', function() {
+    twice = !twice; lsSet('scan_twice', twice ? '1' : '0'); showTwice();
+  });
+  showTwice();
+  if (window.speechSynthesis) {
+    fillVoiceSel();
+    speechSynthesis.onvoiceschanged = fillVoiceSel; // 手機的語音清單是慢慢載入的
   }
 
   function esc(s) { return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
