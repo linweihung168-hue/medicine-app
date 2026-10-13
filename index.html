@@ -121,7 +121,8 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .status-bar.tappable { cursor: pointer; }
-  #statusText { transition: opacity 0.6s ease; }
+  .status-bar { transition: opacity 0.6s ease; }
+  .status-bar.faded { opacity: 0; pointer-events: none; }
 
   #errModal { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.35); z-index: 20; align-items: center; justify-content: center; padding: 24px; }
   .modal-box { background: #fff; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 300px; text-align: center; }
@@ -431,8 +432,9 @@ function displayPlace(item) {
 let statusHideTimer = null;
 async function fetchData() {
   const statusEl = document.getElementById('statusText');
+  const statusBarEl = document.getElementById('statusBar');
   clearTimeout(statusHideTimer);
-  statusEl.style.opacity = '1';
+  statusBarEl.classList.remove('faded');
   statusEl.textContent = '更新中…';
   let success = false;
   try {
@@ -451,8 +453,8 @@ async function fetchData() {
     const now = new Date();
     statusEl.textContent = '已更新 ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
     success = true;
-    // 更新成功後,「已更新 時:分」顯示 3 秒就淡出;失敗/離線的提示則一直保留
-    statusHideTimer = setTimeout(function() { statusEl.style.opacity = '0'; }, 3000);
+    // 更新成功後,「已更新 時:分」連同旁邊的箭頭顯示 3 秒就一起淡出;失敗/離線的提示則一直保留
+    statusHideTimer = setTimeout(function() { statusBarEl.classList.add('faded'); }, 3000);
   } catch(err) {
     try {
       const cached = localStorage.getItem('med_data_cache');
