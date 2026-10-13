@@ -16,7 +16,7 @@
   html { overflow-x: hidden; width: 100%; }
   body {
     margin: 0; font-family: 'Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;
-    background: #EFF6FC; color: #042C53; overscroll-behavior-y: contain;
+    background: #EFF6FC; color: #042C53; overscroll-behavior-y: contain; touch-action: pan-y;
     overflow-x: hidden; width: 100%;
   }
   .screen { min-height: 100vh; min-height: 100dvh; display: none; flex-direction: column; }
@@ -829,7 +829,8 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
 // ==================== 手勢與導覽：左緣滑動(首頁開關選單／詳細頁跟手返回) ====================
 (function() {
   let startX = 0, startY = 0, tracking = false, mode = null, wasOpen = false;
-  const EDGE_ZONE = 24;
+  // 安卓手勢導覽會吃掉最左側約 30px 的觸控(系統返回),所以安卓的感應區要放寬到系統手勢之外
+  const EDGE_ZONE = /Android/i.test(navigator.userAgent) ? 44 : 24;
   const DRAWER_WIDTH = 250;
   const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
@@ -948,6 +949,15 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
     const base = wasOpen ? DRAWER_WIDTH : 0;
     const current = Math.max(0, Math.min(base + dx, DRAWER_WIDTH));
     snapTo(current > DRAWER_WIDTH / 2);
+  }, { passive: true });
+
+  // 系統中途接管觸控(例如安卓判定為捲動或系統手勢)時,把選單/詳細頁歸位,避免卡在半開狀態
+  document.addEventListener('touchcancel', function() {
+    if (!tracking) return;
+    tracking = false;
+    edgeGestureActive = false;
+    if (mode === 'back') finishBack(false);
+    else if (mode === 'drawer') snapTo(wasOpen);
   }, { passive: true });
 })();
 
