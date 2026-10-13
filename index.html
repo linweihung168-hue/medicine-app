@@ -99,6 +99,7 @@
   #scanManualBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
   .scan-tools2 { display: flex; gap: 8px; align-items: center; margin-top: -4px; }
   #scanVoiceSel { flex: 1; min-width: 0; height: 36px; border-radius: 10px; border: 0.5px solid #B5D4F4; background: #fff; color: #2E4E6B; font-size: 13px; padding: 0 8px; }
+  #scanRateBtn, #scanLetterBtn { flex: 1; height: 36px; background: #fff; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 10px; font-size: 13px; padding: 0 10px; }
   #scanTwiceBtn { flex-shrink: 0; height: 36px; background: #fff; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 10px; font-size: 13px; padding: 0 12px; }
   #scanResult { background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; padding: 22px 18px; min-height: 130px; display: flex; flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
   #scanResult .loc { font-size: 38px; font-weight: 800; color: #0C447C; letter-spacing: 1px; overflow-wrap: anywhere; }
@@ -293,6 +294,10 @@
     <div class="scan-tools2">
       <select id="scanVoiceSel" aria-label="語音選擇"></select>
       <button id="scanTwiceBtn">唸兩次:開</button>
+    </div>
+    <div class="scan-tools2">
+      <button id="scanRateBtn">語速:慢</button>
+      <button id="scanLetterBtn">字母:清楚唸法</button>
     </div>
     <div id="scanResult"><div class="hint">按「開始掃碼」後,掃描藥袋上的 QR Code</div></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
@@ -714,11 +719,16 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     do { prev = t; t = t.replace(/^[\(（][^\)）]*[\)）]\s*/, ''); } while (t !== prev);
     return t.trim() || orig;
   }
-  // 料位號逐字拆開唸(G X A 0 1);有兩個位置(用 / 分隔)就依序唸
+  // 清楚唸法:字母聽起來太像的(B、C、E、G、P、Z 都是「ㄧ」音),改用不會混的中文音來唸;資料裡有「/」時只唸第一個
+  const LETTER_SAY = { A:'欸', B:'逼', C:'西', D:'迪', E:'伊', F:'艾夫', G:'吉', H:'艾曲', I:'愛', J:'傑', K:'開', L:'艾爾', M:'艾姆',
+    N:'恩', O:'歐', P:'批', Q:'酷', R:'阿', S:'艾斯', T:'踢', U:'優', V:'威', W:'達不留', X:'艾克斯', Y:'歪', Z:'賊' };
   function spellLoc(loc) {
-    return String(loc || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean).map(function(x){
-      return /^[A-Za-z0-9]+$/.test(x) ? x.split('').join(' ') : x;
-    }).join('，');
+    const first = String(loc || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean)[0] || '';
+    if (!/^[A-Za-z0-9]+$/.test(first)) return first;
+    if (lsGet('scan_letters', '1') === '1') {
+      return first.toUpperCase().split('').map(function(c){ return LETTER_SAY[c] || c; }).join('、');
+    }
+    return first.split('').join(' ');
   }
   // QR 內容是網址 https://www2.cch.org.tw/Mdrug/MTACMH-O718651484#1,藥品碼就是 /Mdrug/ 後、「-」前的那段
   function parseCode(text) {
@@ -740,6 +750,8 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   const voiceSel = document.getElementById('scanVoiceSel');
   const twiceBtn = document.getElementById('scanTwiceBtn');
   let twice = lsGet('scan_twice', '1') === '1';
+  const RATES = [{ n: '慢', v: 0.7 }, { n: '中', v: 0.85 }, { n: '快', v: 1.0 }];
+  let rateIdx = Math.min(2, Math.max(0, parseInt(lsGet('scan_rate', '0'), 10) || 0));
   let speakToken = 0;
 
   function langOf(v) { return String(v.lang || '').replace('_', '-').toLowerCase(); }
@@ -780,7 +792,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     const u = new SpeechSynthesisUtterance(text);
     const v = pickVoice();
     if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = 'zh-TW'; }
-    u.rate = 0.9;
+    u.rate = RATES[rateIdx].v;
     return u;
   }
   function speak(text, once) {
@@ -804,6 +816,19 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     twice = !twice; lsSet('scan_twice', twice ? '1' : '0'); showTwice();
   });
   showTwice();
+  const rateBtn = document.getElementById('scanRateBtn');
+  const letterBtn = document.getElementById('scanLetterBtn');
+  function showRate() { rateBtn.textContent = '語速:' + RATES[rateIdx].n; }
+  function showLetter() { letterBtn.textContent = '字母:' + (lsGet('scan_letters', '1') === '1' ? '清楚唸法' : '一般唸法'); }
+  rateBtn.addEventListener('click', function() {
+    rateIdx = (rateIdx + 1) % RATES.length; lsSet('scan_rate', String(rateIdx)); showRate();
+    speak(spellLoc('GZA01') + '，愛舒疼錠', true); // 切換後立刻試聽
+  });
+  letterBtn.addEventListener('click', function() {
+    lsSet('scan_letters', lsGet('scan_letters', '1') === '1' ? '0' : '1'); showLetter();
+    speak(spellLoc('GZA01') + '，愛舒疼錠', true);
+  });
+  showRate(); showLetter();
   if (window.speechSynthesis) {
     fillVoiceSel();
     speechSynthesis.onvoiceschanged = fillVoiceSel; // 手機的語音清單是慢慢載入的
