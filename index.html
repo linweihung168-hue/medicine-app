@@ -109,6 +109,7 @@
   #scanResult .loc { font-size: 38px; font-weight: 800; color: #0C447C; letter-spacing: 1px; overflow-wrap: anywhere; }
   #scanResult .nm { font-size: 22px; font-weight: 700; color: #2E4E6B; overflow-wrap: anywhere; }
   #scanResult .hint { font-size: 14px; color: #7699B8; }
+  #scanResult .warn { font-size: 16px; font-weight: 700; color: #B3261E; }
   #scanResult.bad .loc, #scanResult.bad .nm { color: #B3261E; }
   #scanResult .st { font-size: 13px; color: #888780; }
   .scan-hist-title { display: none; font-size: 12px; color: #7699B8; margin-top: 4px; }
@@ -329,7 +330,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-13d'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-13e'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -770,6 +771,30 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (!/^[A-Za-z0-9]+$/.test(first)) return first;
     return first.split('').map(function(c){ return LETTER_SAY[c.toUpperCase()] || c; }).join(' ');
   }
+  // 藥包機:料位號以 AA 開頭的藥,由藥包機自動包藥,發籃子時要順便放進籃子
+  function isPacker(item) {
+    return /^AA/i.test(String(item['料位號'] || '').split('/')[0].trim());
+  }
+  // 俗名最前面括號裡的劑量,例如「(40mg/tab)立普妥」→「40mg/tab」
+  function doseText(item) {
+    const m = String(item['俗名'] || '').match(/^\s*[\(（]([^\)）]*)[\)）]/);
+    return m ? m[1].trim() : '';
+  }
+  function unitSay(t) {
+    return String(t).replace(/(\d+(?:\.\d+)?)\s*%/g, '百分之$1').replace(/mcg|μg|ug/gi, '微克').replace(/mg/gi, '毫克')
+      .replace(/ml/gi, '毫升').replace(/(\d)\s*g\b/gi, '$1公克').replace(/\bIU\b/gi, '單位').replace(/[;；]/g, '，');
+  }
+  function doseSay(item) {
+    return doseText(item).split('/').map(function(x){ return x.trim(); })
+      .filter(function(x){ return x && !/^(tab|cap|btl|vial|amp|錠|膠囊|瓶|支)/i.test(x); }).map(unitSay).join('、');
+  }
+  // 報讀內容:藥包機 →「藥包機,藥名,請注意數量」;其他 →「料位號,藥名」(withDose 為真才加劑量)
+  function buildSay(item, withDose) {
+    const name = cleanName(item['俗名']) || cleanName(item['品名與內含量']) || '';
+    if (isPacker(item)) return '藥包機，' + name + '，請注意數量';
+    const loc = String(item['料位號'] || '').trim();
+    return (spellLoc(loc) || '無料位號') + '，' + name + (withDose && doseSay(item) ? '，' + doseSay(item) : '');
+  }
   // QR 內容是網址 https://www2.cch.org.tw/Mdrug/MTACMH-O718651484#1,藥品碼就是 /Mdrug/ 後、「-」前的那段
   function parseCode(text) {
     const t = String(text || '').trim();
@@ -873,14 +898,18 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (!item) { showBad('查無此藥 ' + code, '查無此藥'); return; }
     const loc = String(item['料位號'] || '').trim();
     const name = cleanName(item['俗名']) || cleanName(item['品名與內含量']) || '';
-    const say = (spellLoc(loc) || '無料位號') + '，' + name;
+    const packer = isPacker(item);
+    const say = buildSay(item, false); // 掃碼一律不唸劑量(只在畫面顯示)
     revealResult();
     resultBox.className = '';
     const status = String(item['狀態'] || '').trim();
-    resultBox.innerHTML = '<div class="loc">' + esc(loc || '無料位號') + '</div><div class="nm">' + esc(name) + '</div>' +
+    const dose = doseText(item);
+    resultBox.innerHTML = '<div class="loc">' + esc(packer ? '藥包機' : (loc || '無料位號')) + '</div><div class="nm">' + esc(name) + '</div>' +
+      (packer ? '<div class="warn">請注意數量(' + esc(loc) + ')</div>' : '') +
+      (dose ? '<div class="st">劑量:' + esc(dose) + '</div>' : '') +
       (status ? '<div class="st">狀態:' + esc(status) + '</div>' : '');
     speak(say);
-    addHistory({ loc: loc || '無', name: name, say: say });
+    addHistory({ loc: packer ? '藥包機' : (loc || '無'), name: name, say: say });
   }
 
   function flush() {
@@ -963,7 +992,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
 
   if (window.speechSynthesis) speechSynthesis.getVoices(); // 先觸發語音清單載入
   window.__scanTest = { cleanName: cleanName, spellLoc: spellLoc, parseCode: parseCode };
-  window.ScanVoice = { speak: speak, cleanName: cleanName, spellLoc: spellLoc };
+  window.ScanVoice = { speak: speak, cleanName: cleanName, spellLoc: spellLoc, isPacker: isPacker, doseText: doseText, doseSay: doseSay, buildSay: buildSay };
 })();
 
 // ==================== 語音查詢(首頁搜尋框的麥克風:說藥名 → 依「讀音」比對 → 唸出料位號) ====================
@@ -1011,7 +1040,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     return Math.min.apply(null, prev);
   }
 
-  let tieCount = 0;
+  let lastScores = [];
   const NUM = ['', '一', '兩', '三', '四', '五', '六', '七', '八'];
   function searchByVoice(alts) {
     const qs = alts.map(toSyllables).filter(function(q){ return q.length >= 2; });
@@ -1031,7 +1060,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
       if (best >= 0.6) scored.push({ d: d, score: best });
     });
     scored.sort(function(a, b){ return b.score - a.score; });
-    tieCount = scored.length ? scored.filter(function(x){ return x.score >= scored[0].score - 0.03; }).length : 0; // 讀音幾乎一樣的藥有幾筆
+    lastScores = scored.slice(0, 8).map(function(x){ return x.score; });
     return scored.slice(0, 8).map(function(x){ return x.d; });
   }
 
@@ -1043,23 +1072,83 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     searchEl.placeholder = hint || oldPlaceholder;
   }
 
+  // 把「立普妥 40」「立普妥四十毫克」拆成 藥名 + 劑量數字(只看句尾的數字)
+  function cnNum(t) {
+    if (/^\d+(\.\d+)?$/.test(t)) return parseFloat(t);
+    const D = { '零': 0, '〇': 0, '一': 1, '二': 2, '兩': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9 };
+    const parts = t.split('點');
+    function intPart(x) {
+      if (!x) return 0;
+      if (!/[十百千]/.test(x)) { let v = ''; for (const c of x) { if (!(c in D)) return NaN; v += D[c]; } return parseInt(v, 10); }
+      let total = 0, cur = 0;
+      for (const c of x) {
+        if (c in D) cur = D[c];
+        else if (c === '十') { total += (cur || 1) * 10; cur = 0; }
+        else if (c === '百') { total += cur * 100; cur = 0; }
+        else if (c === '千') { total += cur * 1000; cur = 0; }
+        else return NaN;
+      }
+      return total + cur;
+    }
+    let n = intPart(parts[0]);
+    if (parts[1]) { let f = ''; for (const c of parts[1]) { if (!(c in D)) return NaN; f += D[c]; } n += parseFloat('0.' + f); }
+    return n;
+  }
+  function parseSpoken(text) {
+    const t = String(text || '').trim();
+    const m = t.match(/^(.*?)[\s,，]*((?:\d+(?:\.\d+)?)|(?:[零〇一二兩三四五六七八九十百千]+(?:點[零〇一二三四五六七八九]+)?))\s*(?:毫克|公克|克|毫升|mg|MG|ml|mL|%|百分比)?\s*$/);
+    if (m && m[1].replace(/\s/g, '').length >= 2) {
+      const n = cnNum(m[2]);
+      if (!isNaN(n) && n > 0) return { name: m[1].trim(), dose: n };
+    }
+    return { name: t, dose: null };
+  }
+  function doseNumbers(d) { return (window.ScanVoice.doseText(d).match(/\d+(?:\.\d+)?/g) || []).map(parseFloat); }
+
   function handle(alts) {
     const heard = alts[0];
-    voiceHits = searchByVoice(alts);
-    voiceMsg = '聽到「' + heard + '」→ ' + (voiceHits.length ? '依讀音找到 ' + voiceHits.length + ' 筆(最像的排最前面)' : '沒有找到相近的藥名');
-    searchEl.value = heard;
-    renderList();
-    updateHomeView();
-    window.scrollTo({ top: 0 });
-    if (voiceHits.length) {
-      const d = voiceHits[0];
-      const sv = window.ScanVoice;
-      const loc = String(d['料位號'] || '').trim();
-      const pre = tieCount > 1 ? '有' + (NUM[Math.min(tieCount, 8)]) + '筆相近，第一筆：' : '';
-      sv.speak(pre + (sv.spellLoc(loc) || '無料位號') + '，' + sv.cleanName(d['俗名']));
+    const parsed = alts.map(parseSpoken);
+    const dose = parsed[0].dose;                     // 你有說劑量才會有值
+    let hits = searchByVoice(parsed.map(function(x){ return x.name; }));
+    const scores = lastScores.slice();
+    const sv = window.ScanVoice;
+    let msg = '聽到「' + heard + '」→ ';
+    let doseMissing = false, withDose = false;
+
+    if (dose !== null && hits.length) {
+      const matched = hits.filter(function(d){ return doseNumbers(d).some(function(x){ return Math.abs(x - dose) < 1e-9; }); });
+      if (matched.length) {
+        hits = matched.concat(hits.filter(function(d){ return matched.indexOf(d) < 0; })); // 對的劑量排最前面,其餘留在畫面供核對
+        withDose = true;
+        msg += '藥名「' + parsed[0].name + '」、劑量 ' + dose + ' → 找到 ' + matched.length + ' 筆符合';
+      } else {
+        doseMissing = true;
+        msg += '找到藥名,但沒有 ' + dose + ' 的劑量(其他劑量列在下面)';
+      }
     } else {
-      window.ScanVoice.speak('找不到', true);
+      msg += hits.length ? '依讀音找到 ' + hits.length + ' 筆(最像的排最前面)' : '沒有找到相近的藥名';
     }
+
+    voiceHits = hits; voiceMsg = msg;
+    searchEl.value = heard;
+    renderList(); updateHomeView(); window.scrollTo({ top: 0 });
+
+    if (!hits.length) { sv.speak('找不到', true); return; }
+    if (doseMissing) { sv.speak('沒有這個劑量', true); return; }
+    const top = hits[0];
+    const topName = sv.cleanName(top['俗名']);
+    let pre = '', post = '';
+    // 讀音相近、但名字不同的藥(例如同音別字)→ 先提醒有幾筆
+    const near = withDose ? [] : hits.filter(function(d, i){ return scores[i] !== undefined && scores[i] >= scores[0] - 0.03; });
+    const names = {}; near.forEach(function(d){ names[sv.cleanName(d['俗名'])] = 1; });
+    const nNames = Object.keys(names).length;
+    if (nNames > 1) pre = '有' + NUM[Math.min(nNames, 8)] + '筆相近，第一筆：';
+    // 同名、不同劑量:你沒說劑量時,提醒還有幾筆
+    if (!withDose) {
+      const same = hits.filter(function(d){ return d !== top && sv.cleanName(d['俗名']) === topName; }).length;
+      if (same > 0) post = '，另有' + NUM[Math.min(same, 8)] + '筆';
+    }
+    sv.speak(pre + sv.buildSay(top, withDose) + post);
   }
 
   micBtn.addEventListener('click', function() {
@@ -1087,7 +1176,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     try { rec.start(); } catch (e) { ui(false); }
   });
 
-  window.__voiceTest = { searchByVoice: searchByVoice, toSyllables: toSyllables, handle: handle };
+  window.__voiceTest = { searchByVoice: searchByVoice, toSyllables: toSyllables, handle: handle, parseSpoken: parseSpoken };
 })();
 
 // ==================== 版本資訊(改版紀錄,手動維護) ====================
