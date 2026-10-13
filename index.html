@@ -90,6 +90,8 @@
   #scanStartBtn.on { background: #E3F3E8; color: #1F6B3E; }
   #scanInput { width: 100%; height: 48px; border-radius: 12px; border: 0.5px solid #B5D4F4; background: #fff; font-size: 16px; padding: 0 14px; outline: none; }
   #scanInput:focus { border-color: #185FA5; }
+  .scan-tools { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #7699B8; margin-top: -6px; }
+  #scanManualBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
   #scanResult { background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; padding: 22px 18px; min-height: 130px; display: flex; flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
   #scanResult .loc { font-size: 38px; font-weight: 800; color: #0C447C; letter-spacing: 1px; overflow-wrap: anywhere; }
   #scanResult .nm { font-size: 22px; font-weight: 700; color: #2E4E6B; overflow-wrap: anywhere; }
@@ -276,6 +278,7 @@
   <div class="scan-body">
     <button id="scanStartBtn">開始掃碼</button>
     <input id="scanInput" type="text" inputmode="none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
+    <div class="scan-tools"><span id="scanLockMsg"></span><button id="scanManualBtn">手動輸入測試</button></div>
     <div id="scanResult"><div class="hint">按「開始掃碼」後,掃描藥袋上的 QR Code</div></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
     <div id="scanHistory"></div>
@@ -672,7 +675,9 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   const resultBox = document.getElementById('scanResult');
   const histBox = document.getElementById('scanHistory');
   const startBtn = document.getElementById('scanStartBtn');
-  let listening = false, idleTimer = null, history = [];
+  let listening = false, manual = false, idleTimer = null, history = [], wakeLock = null;
+  const lockMsg = document.getElementById('scanLockMsg');
+  const manualBtn = document.getElementById('scanManualBtn');
 
   // 去掉俗名最前面的劑量括號,例如「(15mL)愛爾卡因點眼液(自費)」→「愛爾卡因點眼液(自費)」
   function cleanName(s) {
@@ -780,7 +785,35 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     }, 400);
   });
   scanInput.addEventListener('blur', function() {
-    if (listening && scanScreen.classList.contains('active')) setTimeout(function(){ scanInput.focus(); }, 150);
+    if (listening && !manual && scanScreen.classList.contains('active')) setTimeout(function(){ scanInput.focus(); }, 150);
+  });
+
+  // 掃碼頁保持螢幕恆亮(離開掃碼頁就釋放)
+  async function lockScreen() {
+    try {
+      if (!('wakeLock' in navigator)) { lockMsg.textContent = '此瀏覽器不支援螢幕恆亮,請自行調長螢幕逾時'; return; }
+      if (wakeLock) return;
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', function(){ wakeLock = null; });
+      lockMsg.textContent = '螢幕恆亮已開啟';
+    } catch (e) { wakeLock = null; lockMsg.textContent = '無法開啟螢幕恆亮,請自行調長螢幕逾時'; }
+  }
+  function unlockScreen() {
+    try { if (wakeLock) wakeLock.release(); } catch (e) {}
+    wakeLock = null; lockMsg.textContent = '';
+  }
+  // 手機切到別的程式再切回來時,系統會自動放掉恆亮,這裡補回來
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible' && listening && scanScreen.classList.contains('active')) lockScreen();
+  });
+
+  manualBtn.addEventListener('click', function() {
+    manual = !manual;
+    scanInput.setAttribute('inputmode', manual ? 'text' : 'none');
+    manualBtn.textContent = manual ? '關閉手動輸入' : '手動輸入測試';
+    scanInput.placeholder = manual ? '輸入藥品碼(如 MTACMH)後按 Enter' : '掃描器會輸入到這裡';
+    scanInput.blur();
+    setTimeout(function(){ scanInput.focus(); }, 50);
   });
 
   startBtn.addEventListener('click', function() {
@@ -789,12 +822,14 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     listening = true;
     startBtn.classList.add('on');
     startBtn.textContent = '● 掃碼中(點這裡可重新對準)';
+    lockScreen();
     scanInput.focus();
   });
 
   document.getElementById('scanBtn').addEventListener('click', function() {
     closeDrawer();
     listening = false;
+    manual = false; scanInput.setAttribute('inputmode', 'none'); manualBtn.textContent = '手動輸入測試'; scanInput.placeholder = '掃描器會輸入到這裡';
     startBtn.classList.remove('on');
     startBtn.textContent = '開始掃碼';
     showScreen('scanScreen');
@@ -802,6 +837,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   });
   document.getElementById('scanBackBtn').addEventListener('click', function() {
     listening = false;
+    unlockScreen();
     if (window.speechSynthesis) speechSynthesis.cancel();
     scanInput.blur();
     showScreen('homeScreen');
