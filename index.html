@@ -16,7 +16,7 @@
   html { overflow-x: hidden; width: 100%; }
   body {
     margin: 0; font-family: 'Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;
-    background: #EFF6FC; color: #042C53; overscroll-behavior-y: contain; touch-action: pan-y;
+    background: #EFF6FC; color: #042C53; overscroll-behavior-y: contain;
     overflow-x: hidden; width: 100%;
   }
   .screen { min-height: 100vh; min-height: 100dvh; display: none; flex-direction: column; }
@@ -866,6 +866,10 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
 
   // 改成「任何位置橫向滑動」都能觸發(不再只限最左緣),避開安卓系統返回手勢吃掉邊緣觸控的問題
   let pending = false, active = false;
+  // iPhone 維持原本順暢的「左緣跟手」做法;安卓改成任何位置橫向滑動都能觸發(避開系統返回手勢)
+  const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const EDGE_ZONE = 24;
+  if (!IS_IOS) document.documentElement.style.touchAction = 'pan-y';
 
   function reset() { pending = false; active = false; tracking = false; edgeGestureActive = false; }
 
@@ -898,6 +902,12 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
       wasOpen = isOpen;
     }
     startX = t.clientX; startY = t.clientY;
+    if (IS_IOS) {
+      const inZone = (mode === 'drawer' && wasOpen) ? true : t.clientX <= EDGE_ZONE;
+      if (!inZone) return;
+      activate();
+      return;
+    }
     pending = true;
   }, { passive: true });
 
@@ -915,6 +925,13 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
       if (!horizontal || !rightOk) { pending = false; return; } // 垂直或方向不對 → 交還給一般捲動
       pending = false;
       activate();
+    }
+
+    if (ady > 60 && ady > Math.abs(dx)) { // 垂直手勢 → 取消並歸位
+      const m = mode, wo = wasOpen;
+      reset();
+      if (m === 'back') finishBack(false); else snapTo(wo);
+      return;
     }
 
     if (mode === 'back') {
@@ -938,7 +955,7 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
     reset();
 
     if (mode === 'back') {
-      finishBack(Math.max(0, dx) > window.innerWidth / 3);
+      finishBack(Math.max(0, dx) > window.innerWidth / (IS_IOS ? 2 : 3));
       return;
     }
     const base = wasOpen ? DRAWER_WIDTH : 0;
