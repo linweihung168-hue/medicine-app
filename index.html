@@ -96,18 +96,22 @@
   #scanInput { width: 100%; height: 48px; border-radius: 12px; border: 0.5px solid #B5D4F4; background: #fff; font-size: 16px; padding: 0 14px; outline: none; }
   #scanInput:focus { border-color: #185FA5; }
   .scan-tools { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #7699B8; margin-top: -6px; }
+  #scanHint { text-align: center; font-size: 13px; color: #7699B8; margin-top: -6px; }
+  .scan-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .scan-btns button { white-space: nowrap; }
+  #scanRateBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
   #scanManualBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
   .scan-tools2 { display: flex; gap: 8px; align-items: center; margin-top: -4px; }
   #scanVoiceSel { flex: 1; min-width: 0; height: 36px; border-radius: 10px; border: 0.5px solid #B5D4F4; background: #fff; color: #2E4E6B; font-size: 13px; padding: 0 8px; }
   #scanRateBtn, #scanLetterBtn { flex: 1; height: 36px; background: #fff; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 10px; font-size: 13px; padding: 0 10px; }
   #scanTwiceBtn { flex-shrink: 0; height: 36px; background: #fff; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 10px; font-size: 13px; padding: 0 12px; }
-  #scanResult { background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; padding: 22px 18px; min-height: 130px; display: flex; flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
+  #scanResult { background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; padding: 18px; display: none; flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
   #scanResult .loc { font-size: 38px; font-weight: 800; color: #0C447C; letter-spacing: 1px; overflow-wrap: anywhere; }
   #scanResult .nm { font-size: 22px; font-weight: 700; color: #2E4E6B; overflow-wrap: anywhere; }
   #scanResult .hint { font-size: 14px; color: #7699B8; }
   #scanResult.bad .loc, #scanResult.bad .nm { color: #B3261E; }
   #scanResult .st { font-size: 13px; color: #888780; }
-  .scan-hist-title { font-size: 12px; color: #7699B8; margin-top: 4px; }
+  .scan-hist-title { display: none; font-size: 12px; color: #7699B8; margin-top: 4px; }
   .scan-hist-item { display: flex; gap: 8px; align-items: baseline; background: #fff; border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; border: 0.5px solid #eee; font-size: 14px; color: #2E4E6B; }
   .scan-hist-item .t { color: #7699B8; font-size: 12px; flex-shrink: 0; }
   .scan-hist-item .l { font-weight: 700; color: #0C447C; flex-shrink: 0; }
@@ -289,17 +293,10 @@
   </div>
   <div class="scan-body">
     <button id="scanStartBtn">開始掃碼</button>
+    <div id="scanHint">掃描藥袋上的 QR Code</div>
     <input id="scanInput" type="text" inputmode="none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
-    <div class="scan-tools"><span id="scanLockMsg"></span><button id="scanManualBtn">手動輸入測試</button></div>
-    <div class="scan-tools2">
-      <select id="scanVoiceSel" aria-label="語音選擇"></select>
-      <button id="scanTwiceBtn">唸兩次:開</button>
-    </div>
-    <div class="scan-tools2">
-      <button id="scanRateBtn">語速:慢</button>
-      <button id="scanLetterBtn">字母:一般</button>
-    </div>
-    <div id="scanResult"><div class="hint">按「開始掃碼」後,掃描藥袋上的 QR Code</div></div>
+    <div class="scan-tools"><span id="scanLockMsg"></span><span class="scan-btns"><button id="scanRateBtn">語速:慢</button><button id="scanManualBtn">手動輸入測試</button></span></div>
+    <div id="scanResult"></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
     <div id="scanHistory"></div>
   </div>
@@ -719,18 +716,12 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     do { prev = t; t = t.replace(/^[\(（][^\)）]*[\)）]\s*/, ''); } while (t !== prev);
     return t.trim() || orig;
   }
-  // 清楚唸法:字母聽起來太像的(B、C、E、G、P、Z 都是「ㄧ」音),改用不會混的中文音來唸;資料裡有「/」時只唸第一個
-  const LETTER_SAY = { A:'欸', B:'逼', C:'西', D:'迪', E:'伊', F:'艾夫', G:'吉', H:'艾曲', I:'愛', J:'傑', K:'開', L:'艾爾', M:'艾姆',
-    N:'恩', O:'歐', P:'批', Q:'酷', R:'阿', S:'艾斯', T:'踢', U:'優', V:'威', W:'達不留', X:'艾克斯', Y:'歪', Z:'賊' };
-  const NATO = { A:'Alpha', B:'Bravo', C:'Charlie', D:'Delta', E:'Echo', F:'Foxtrot', G:'Golf', H:'Hotel', I:'India', J:'Juliet', K:'Kilo', L:'Lima', M:'Mike',
-    N:'November', O:'Oscar', P:'Papa', Q:'Quebec', R:'Romeo', S:'Sierra', T:'Tango', U:'Uniform', V:'Victor', W:'Whiskey', X:'X-ray', Y:'Yankee', Z:'Zulu' };
+  // 字母唸法:大多數字母照原本唸;唸起來會混的字母改用中文字(之後有字母唸錯,把它加進這張表就好)。資料裡有「/」時只唸第一個
+  const LETTER_SAY = { X: '叉', Z: '力', L: '欸樓' };
   function spellLoc(loc) {
     const first = String(loc || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean)[0] || '';
     if (!/^[A-Za-z0-9]+$/.test(first)) return first;
-    const mode = lsGet('scan_letters', '0'); // 0=一般 2=英文代號 1=中文音
-    if (mode === '1') return first.toUpperCase().split('').map(function(c){ return LETTER_SAY[c] || c; }).join('、');
-    if (mode === '2') return first.toUpperCase().split('').map(function(c){ return NATO[c] || c; }).join('、');
-    return first.split('').join(' ');
+    return first.split('').map(function(c){ return LETTER_SAY[c.toUpperCase()] || c; }).join(' ');
   }
   // QR 內容是網址 https://www2.cch.org.tw/Mdrug/MTACMH-O718651484#1,藥品碼就是 /Mdrug/ 後、「-」前的那段
   function parseCode(text) {
@@ -749,9 +740,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
 
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  const voiceSel = document.getElementById('scanVoiceSel');
-  const twiceBtn = document.getElementById('scanTwiceBtn');
-  let twice = lsGet('scan_twice', '1') === '1';
+  const twice = true; // 固定唸兩次
   const RATES = [{ n: '慢', v: 0.7 }, { n: '中', v: 0.85 }, { n: '快', v: 1.0 }];
   let rateIdx = Math.min(2, Math.max(0, parseInt(lsGet('scan_rate', '0'), 10) || 0));
   let speakToken = 0;
@@ -769,27 +758,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     const pool = tw.length ? tw : ok;
     return pool.find(function(v){ return v.localService; }) || pool[0] || null;
   }
-  function pickVoice() {
-    const saved = lsGet('scan_voice', '');
-    if (saved) {
-      const hit = zhVoices().find(function(v){ return v.voiceURI === saved || v.name === saved; });
-      if (hit) return hit;
-    }
-    return autoVoice();
-  }
-  function fillVoiceSel() {
-    const vs = zhVoices();
-    const saved = lsGet('scan_voice', '');
-    voiceSel.innerHTML = '<option value="">語音:自動(台灣國語)</option>';
-    vs.forEach(function(v) {
-      const o = document.createElement('option');
-      o.value = v.voiceURI || v.name;
-      o.textContent = v.name + '(' + v.lang + ')' + (isCantonese(v) ? ' 粵語' : '');
-      voiceSel.appendChild(o);
-    });
-    voiceSel.value = saved;
-    if (voiceSel.value !== saved) voiceSel.value = '';
-  }
+  function pickVoice() { return autoVoice(); }
   function utter(text) {
     const u = new SpeechSynthesisUtterance(text);
     const v = pickVoice();
@@ -809,32 +778,14 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     }
     speechSynthesis.speak(u1);
   }
-  voiceSel.addEventListener('change', function() {
-    lsSet('scan_voice', voiceSel.value);
-    speak('愛舒疼錠', true);
-  });
-  function showTwice() { twiceBtn.textContent = '唸兩次:' + (twice ? '開' : '關'); }
-  twiceBtn.addEventListener('click', function() {
-    twice = !twice; lsSet('scan_twice', twice ? '1' : '0'); showTwice();
-  });
-  showTwice();
   const rateBtn = document.getElementById('scanRateBtn');
-  const letterBtn = document.getElementById('scanLetterBtn');
   function showRate() { rateBtn.textContent = '語速:' + RATES[rateIdx].n; }
-  function showLetter() { const m = lsGet('scan_letters', '0'); letterBtn.textContent = '字母:' + (m === '2' ? '英文代號' : m === '1' ? '中文音' : '一般'); }
   rateBtn.addEventListener('click', function() {
     rateIdx = (rateIdx + 1) % RATES.length; lsSet('scan_rate', String(rateIdx)); showRate();
     speak(spellLoc('GZA01') + '，愛舒疼錠', true); // 切換後立刻試聽
   });
-  letterBtn.addEventListener('click', function() {
-    const m = lsGet('scan_letters', '0'); lsSet('scan_letters', m === '0' ? '2' : m === '2' ? '1' : '0'); showLetter();
-    speak(spellLoc('GZA01') + '，愛舒疼錠', true);
-  });
-  showRate(); showLetter();
-  if (window.speechSynthesis) {
-    fillVoiceSel();
-    speechSynthesis.onvoiceschanged = fillVoiceSel; // 手機的語音清單是慢慢載入的
-  }
+  showRate();
+  if (window.speechSynthesis) speechSynthesis.getVoices(); // 先觸發語音清單載入(手機的語音是慢慢載入的)
 
   function esc(s) { return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function renderHistory() {
@@ -854,7 +805,13 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (history.length > 15) history.pop();
     renderHistory();
   }
+  function revealResult() {
+    resultBox.style.display = 'flex';
+    document.getElementById('scanHint').style.display = 'none';
+    document.querySelector('.scan-hist-title').style.display = 'block';
+  }
   function showBad(msg, say) {
+    revealResult();
     resultBox.className = 'bad';
     resultBox.innerHTML = '<div class="loc">' + esc(msg) + '</div>';
     speak(say);
@@ -870,6 +827,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     const loc = String(item['料位號'] || '').trim();
     const name = cleanName(item['俗名']) || cleanName(item['品名與內含量']) || '';
     const say = (spellLoc(loc) || '無料位號') + '，' + name;
+    revealResult();
     resultBox.className = '';
     const status = String(item['狀態'] || '').trim();
     resultBox.innerHTML = '<div class="loc">' + esc(loc || '無料位號') + '</div><div class="nm">' + esc(name) + '</div>' +
@@ -903,12 +861,12 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   // 掃碼頁保持螢幕恆亮(離開掃碼頁就釋放)
   async function lockScreen() {
     try {
-      if (!('wakeLock' in navigator)) { lockMsg.textContent = '此瀏覽器不支援螢幕恆亮,請自行調長螢幕逾時'; return; }
+      if (!('wakeLock' in navigator)) { lockMsg.textContent = '不支援恆亮,請調長螢幕逾時'; return; }
       if (wakeLock) return;
       wakeLock = await navigator.wakeLock.request('screen');
       wakeLock.addEventListener('release', function(){ wakeLock = null; });
       lockMsg.textContent = '螢幕恆亮已開啟';
-    } catch (e) { wakeLock = null; lockMsg.textContent = '無法開啟螢幕恆亮,請自行調長螢幕逾時'; }
+    } catch (e) { wakeLock = null; lockMsg.textContent = '無法恆亮,請調長螢幕逾時'; }
   }
   function unlockScreen() {
     try { if (wakeLock) wakeLock.release(); } catch (e) {}
