@@ -829,8 +829,6 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
 // ==================== 手勢與導覽：左緣滑動(首頁開關選單／詳細頁跟手返回) ====================
 (function() {
   let startX = 0, startY = 0, tracking = false, mode = null, wasOpen = false;
-  // 安卓手勢導覽會吃掉最左側約 30px 的觸控(系統返回),所以安卓的感應區要放寬到系統手勢之外
-  const EDGE_ZONE = /Android/i.test(navigator.userAgent) ? 44 : 24;
   const DRAWER_WIDTH = 250;
   const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
@@ -866,64 +864,66 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
     }
   }
 
+  // 改成「任何位置橫向滑動」都能觸發(不再只限最左緣),避開安卓系統返回手勢吃掉邊緣觸控的問題
+  let pending = false, active = false;
+
+  function reset() { pending = false; active = false; tracking = false; edgeGestureActive = false; }
+
+  function activate() {
+    active = true; tracking = true; edgeGestureActive = true;
+    if (mode === 'back') {
+      homeScreenEl.classList.add('active');
+      detailScreen.classList.add('overlay-drag', 'dragging-live');
+    } else {
+      drawer.classList.add('dragging');
+      overlay.classList.add('dragging', 'open');
+    }
+  }
+
   document.addEventListener('touchstart', function(e) {
+    reset();
+    if (e.touches.length !== 1) return;
     const homeActive = homeScreenEl.classList.contains('active');
     const detailActive = detailScreen.classList.contains('active');
     if (!homeActive && !detailActive) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     const t = e.touches[0];
-
     if (detailActive) {
-      if (t.clientX > EDGE_ZONE) return;
       mode = 'back';
-      startX = t.clientX; startY = t.clientY; tracking = true;
-      edgeGestureActive = true;
-      homeScreenEl.classList.add('active');
-      detailScreen.classList.add('overlay-drag', 'dragging-live');
-      return;
-    }
-
-    // homeActive：選單關閉時只能從左緣滑開；已打開時,面板範圍內任何位置都能滑動關閉
-    const isOpen = drawer.classList.contains('open');
-    if (isOpen) {
-      if (t.clientX > DRAWER_WIDTH) return; // 觸控點不在選單面板上,交給遮罩點擊處理
     } else {
-      if (t.clientX > EDGE_ZONE) return;
+      const isOpen = drawer.classList.contains('open');
+      if (isOpen && t.clientX > DRAWER_WIDTH) return; // 觸控點不在選單面板上,交給遮罩點擊處理
+      mode = 'drawer';
+      wasOpen = isOpen;
     }
-    mode = 'drawer';
-    wasOpen = isOpen;
-    startX = t.clientX; startY = t.clientY; tracking = true;
-    edgeGestureActive = true;
-    drawer.classList.add('dragging');
-    overlay.classList.add('dragging', 'open');
+    startX = t.clientX; startY = t.clientY;
+    pending = true;
   }, { passive: true });
 
   document.addEventListener('touchmove', function(e) {
-    if (!tracking) return;
+    if (!pending && !active) return;
     const t = e.touches[0];
     const dx = t.clientX - startX;
-    const dy = Math.abs(t.clientY - startY);
+    const ady = Math.abs(t.clientY - startY);
+
+    if (pending) {
+      const adx = Math.abs(dx);
+      if (adx < 8 && ady < 8) return;
+      const horizontal = adx > ady * 1.2;
+      const rightOk = (mode === 'back') || !wasOpen ? dx > 0 : dx < 0; // 返回/開選單要往右;關選單要往左
+      if (!horizontal || !rightOk) { pending = false; return; } // 垂直或方向不對 → 交還給一般捲動
+      pending = false;
+      activate();
+    }
 
     if (mode === 'back') {
-      if (dy > 60 && dy > Math.abs(dx)) {
-        tracking = false;
-        edgeGestureActive = false;
-        finishBack(false);
-        return;
-      }
       if (dx <= 0) return;
       if (e.cancelable) e.preventDefault();
-      const clamped = Math.min(dx, window.innerWidth);
-      detailScreen.style.transform = 'translateX(' + clamped + 'px)';
+      detailScreen.style.transform = 'translateX(' + Math.min(dx, window.innerWidth) + 'px)';
       return;
     }
 
-    // mode === 'drawer'：垂直手勢(可能是想滾動畫面)→ 取消,並強制歸位到手勢開始前的狀態,不會卡在中間
-    if (dy > 60 && dy > Math.abs(dx)) {
-      tracking = false;
-      edgeGestureActive = false;
-      snapTo(wasOpen);
-      return;
-    }
     if (e.cancelable) e.preventDefault();
     const base = wasOpen ? DRAWER_WIDTH : 0;
     const current = Math.max(0, Math.min(base + dx, DRAWER_WIDTH));
@@ -932,20 +932,15 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
   }, { passive: false });
 
   document.addEventListener('touchend', function(e) {
-    if (!tracking) return;
-    tracking = false;
-    edgeGestureActive = false;
-
-    if (mode === 'back') {
-      const t = e.changedTouches[0];
-      const dx = Math.max(0, t.clientX - startX);
-      finishBack(dx > window.innerWidth / 2);
-      return;
-    }
-
-    if (mode !== 'drawer') return;
+    if (!active) { pending = false; return; }
     const t = e.changedTouches[0];
     const dx = t.clientX - startX;
+    reset();
+
+    if (mode === 'back') {
+      finishBack(Math.max(0, dx) > window.innerWidth / 3);
+      return;
+    }
     const base = wasOpen ? DRAWER_WIDTH : 0;
     const current = Math.max(0, Math.min(base + dx, DRAWER_WIDTH));
     snapTo(current > DRAWER_WIDTH / 2);
@@ -953,9 +948,9 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
 
   // 系統中途接管觸控(例如安卓判定為捲動或系統手勢)時,把選單/詳細頁歸位,避免卡在半開狀態
   document.addEventListener('touchcancel', function() {
-    if (!tracking) return;
-    tracking = false;
-    edgeGestureActive = false;
+    const was = active;
+    reset();
+    if (!was) return;
     if (mode === 'back') finishBack(false);
     else if (mode === 'drawer') snapTo(wasOpen);
   }, { passive: true });
@@ -990,6 +985,7 @@ function showSwipeHintOnce() {
   }, { passive: true });
 
   document.addEventListener('touchmove', function(e) {
+    if (edgeGestureActive) { pulling = false; indicator.style.height = '0px'; return; }
     if (!pulling || triggered) return;
     const dy = e.touches[0].clientY - startY;
     if (dy <= 0) { indicator.style.height = '0px'; return; }
