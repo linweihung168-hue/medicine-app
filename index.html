@@ -86,6 +86,7 @@
   .mic-btn.on { background: #FCEBEB; animation: micpulse 1.1s ease-in-out infinite; }
   .mic-btn.on svg { stroke: #B3261E; }
   @keyframes micpulse { 50% { opacity: 0.55; } }
+  .voice-warn { color: #B3261E; font-weight: 700; font-size: 14px; padding-top: 0; }
   .voice-msg { font-size: 12.5px; color: #185FA5; padding: 8px 10px 4px; }
   #scanScreen { background: #EFF6FC; }
   .scan-top { display: flex; align-items: center; gap: 12px; padding: 16px; }
@@ -330,12 +331,13 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-13e'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-13f'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
 let voiceHits = null; // 語音查詢的結果(依相似度排序);不是 null 時,清單就顯示這個
 let voiceMsg = '';
+let voiceWarn = ''; // 語音查詢沒說劑量、但有好幾種劑量時的紅字提醒
 let activeCode = null;
 let editing = false;
 let saving = false;
@@ -662,6 +664,12 @@ function renderList() {
     vm.className = 'voice-msg';
     vm.textContent = voiceMsg;
     list.appendChild(vm);
+    if (voiceWarn) {
+      const vw = document.createElement('div');
+      vw.className = 'voice-msg voice-warn';
+      vw.textContent = voiceWarn;
+      list.appendChild(vw);
+    }
   }
   if (items.length === 0) {
     list.insertAdjacentHTML('beforeend', '<p class="empty-msg">找不到符合的藥品</p>');
@@ -1129,6 +1137,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
       msg += hits.length ? '依讀音找到 ' + hits.length + ' 筆(最像的排最前面)' : '沒有找到相近的藥名';
     }
 
+    voiceWarn = '';
     voiceHits = hits; voiceMsg = msg;
     searchEl.value = heard;
     renderList(); updateHomeView(); window.scrollTo({ top: 0 });
@@ -1145,8 +1154,14 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (nNames > 1) pre = '有' + NUM[Math.min(nNames, 8)] + '筆相近，第一筆：';
     // 同名、不同劑量:你沒說劑量時,提醒還有幾筆
     if (!withDose) {
-      const same = hits.filter(function(d){ return d !== top && sv.cleanName(d['俗名']) === topName; }).length;
-      if (same > 0) post = '，另有' + NUM[Math.min(same, 8)] + '筆';
+      const sameItems = hits.filter(function(d){ return sv.cleanName(d['俗名']) === topName; });
+      if (sameItems.length > 1) {
+        post = '，請核對劑量';
+        const doses = [];
+        sameItems.forEach(function(d){ const t = (sv.doseText(d).split('/')[0] || '').trim(); if (t && doses.indexOf(t) < 0) doses.push(t); });
+        voiceWarn = '有 ' + sameItems.length + ' 種劑量' + (doses.length ? '(' + doses.join('、') + ')' : '') + ',請核對';
+        renderList();
+      }
     }
     sv.speak(pre + sv.buildSay(top, withDose) + post);
   }
