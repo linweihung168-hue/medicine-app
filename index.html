@@ -329,7 +329,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-13b'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-13d'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -436,9 +436,11 @@ renderChips();
 const SEEN_BUILD_KEY = 'seen_app_build';
 const SEEN_MERGE_KEY = 'seen_merge_time';
 
+let pendingBuild = null; // 檢查到網站上有比目前更新的程式版本時,記在這裡(還沒套用)
 function getUpdateCount() {
   let count = 0;
-  try {
+  if (pendingBuild) count++;
+  else try {
     if (localStorage.getItem(SEEN_BUILD_KEY) !== APP_BUILD) count++;
   } catch(e) {}
   try {
@@ -537,6 +539,48 @@ async function fetchData() {
   renderUpdateBadge();
   return success;
 }
+
+// ==================== 程式本身的更新 ====================
+// 向網站要最新的 index.html(不看手機存的快取),比對裡面的 APP_BUILD。
+//  - apply=false(打開 App、切回 App 時的悄悄檢查):發現新版只亮紅點,不會自己換,等你按「更新」。
+//  - apply=true(你按「更新」或下拉更新):發現新版就清掉舊快取並重新載入。
+// 回傳 true 代表正在重新載入(呼叫的人就不用再做別的事)。
+let lastSilentCheck = 0;
+async function checkAppUpdate(apply) {
+  try {
+    const res = await fetch('index.html?cb=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return false;
+    const m = (await res.text()).match(/const APP_BUILD = '([^']+)'/);
+    if (!m) return false;
+    if (m[1] === APP_BUILD) { pendingBuild = null; renderUpdateBadge(); return false; }
+    if (!apply) { pendingBuild = m[1]; renderUpdateBadge(); return false; }
+    // 防止無限重新載入:同一個新版本 2 分鐘內只試一次(例如 GitHub 的新檔案還沒完全準備好)
+    let last = null;
+    try { last = JSON.parse(localStorage.getItem('app_update_try') || 'null'); } catch (e) {}
+    if (last && last.build === m[1] && Date.now() - last.t < 120000) {
+      showErrModal('發現新版本,但還沒載入成功,請過一兩分鐘再按一次「更新」。');
+      return false;
+    }
+    try {
+      localStorage.setItem('app_update_try', JSON.stringify({ build: m[1], t: Date.now() }));
+      localStorage.setItem(SEEN_BUILD_KEY, m[1]); // 換成新版後,紅點就不再為「這個新版」亮起
+    } catch (e) {}
+    document.getElementById('statusBar').classList.remove('faded');
+    document.getElementById('statusText').textContent = '發現新版本,更新中…';
+    if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(function(k){ return caches.delete(k); })); }
+    if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
+    location.reload();
+    return true;
+  } catch (e) { return false; } // 沒網路或查不到,就當作沒有新版,照原本流程只更新資料
+}
+function silentCheckAppUpdate() {
+  if (Date.now() - lastSilentCheck < 30000) return; // 30 秒內不重複檢查
+  lastSilentCheck = Date.now();
+  checkAppUpdate(false);
+}
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') silentCheckAppUpdate(); // 從背景切回 App 時檢查
+});
 
 // ==================== 篩選條件定義、清單排序與渲染 ====================
 const FILTERS = [
@@ -679,10 +723,13 @@ document.getElementById('overlay').addEventListener('click', closeDrawer);
 document.getElementById('drawerRefreshBtn').addEventListener('click', function(){
   const label = document.getElementById('drawerRefreshLabel');
   label.textContent = '更新中…';
-  fetchData().then(function(success){
-    label.textContent = '更新';
-    if (success) markUpdatesSeen();
-    closeDrawer();
+  checkAppUpdate(true).then(function(reloading) {
+    if (reloading) return;
+    return fetchData().then(function(success){
+      label.textContent = '更新';
+      if (success) markUpdatesSeen();
+      closeDrawer();
+    });
   });
 });
 
@@ -1447,10 +1494,13 @@ function showSwipeHintOnce() {
       indicator.classList.add('loading');
       pullText.textContent = '更新中…';
       indicator.style.height = '48px';
-      fetchData().then(function(success) {
-        indicator.classList.remove('loading');
-        indicator.style.height = '0px';
-        if (success) markUpdatesSeen();
+      checkAppUpdate(true).then(function(reloading) {
+        if (reloading) return;
+        return fetchData().then(function(success) {
+          indicator.classList.remove('loading');
+          indicator.style.height = '0px';
+          if (success) markUpdatesSeen();
+        });
       });
     } else {
       indicator.style.height = '0px';
@@ -1469,6 +1519,7 @@ function showSwipeHintOnce() {
 showScreen('homeScreen');
 updateHomeView();
 fetchData();
+silentCheckAppUpdate(); // 打開 App 時悄悄檢查一次有沒有新版(有的話只亮紅點)
 showSwipeHintOnce();
 </script>
 </body>

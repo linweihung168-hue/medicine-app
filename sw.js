@@ -1,4 +1,4 @@
-const CACHE_NAME = 'find-medicine-v9';
+const CACHE_NAME = 'find-medicine-v10';
 const ASSETS = ['./', './index.html', './manifest.json', './acorn-icon-192.png', './acorn-icon-512.png', './line-icon.png', './acorn-transparent.png'];
 const OPTIONAL_ASSETS = ['./pinyin-pro.js']; // 讀音工具:就算還沒上傳,也不會讓整個安裝失敗
 const FETCH_TIMEOUT = 3000; // 網路太慢時,等這麼久就直接用快取,不要一直卡著
@@ -18,12 +18,13 @@ self.addEventListener('activate', (e) => {
 function fetchWithTimeout(request, ms) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), ms);
-    fetch(request).then((res) => { clearTimeout(timer); resolve(res); }).catch((err) => { clearTimeout(timer); reject(err); });
+    fetch(request, { cache: 'no-cache' }).then((res) => { clearTimeout(timer); resolve(res); }).catch((err) => { clearTimeout(timer); reject(err); });
   });
 }
 
 self.addEventListener('fetch', (e) => {
   if (e.request.url.includes('script.google.com')) return;
+  if (e.request.url.includes('cb=')) return; // 程式「檢查新版」用的請求,直接走網路,不要存進快取
   // 網路優先,但太慢(超過 FETCH_TIMEOUT)或失敗就退回快取,更新永遠會生效、離線或訊號差也不會卡住
   e.respondWith(
     fetchWithTimeout(e.request, FETCH_TIMEOUT).then((res) => {
