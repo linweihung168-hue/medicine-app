@@ -297,7 +297,7 @@
     </div>
     <div class="scan-tools2">
       <button id="scanRateBtn">語速:慢</button>
-      <button id="scanLetterBtn">字母:清楚唸法</button>
+      <button id="scanLetterBtn">字母:一般</button>
     </div>
     <div id="scanResult"><div class="hint">按「開始掃碼」後,掃描藥袋上的 QR Code</div></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
@@ -722,12 +722,14 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   // 清楚唸法:字母聽起來太像的(B、C、E、G、P、Z 都是「ㄧ」音),改用不會混的中文音來唸;資料裡有「/」時只唸第一個
   const LETTER_SAY = { A:'欸', B:'逼', C:'西', D:'迪', E:'伊', F:'艾夫', G:'吉', H:'艾曲', I:'愛', J:'傑', K:'開', L:'艾爾', M:'艾姆',
     N:'恩', O:'歐', P:'批', Q:'酷', R:'阿', S:'艾斯', T:'踢', U:'優', V:'威', W:'達不留', X:'艾克斯', Y:'歪', Z:'賊' };
+  const NATO = { A:'Alpha', B:'Bravo', C:'Charlie', D:'Delta', E:'Echo', F:'Foxtrot', G:'Golf', H:'Hotel', I:'India', J:'Juliet', K:'Kilo', L:'Lima', M:'Mike',
+    N:'November', O:'Oscar', P:'Papa', Q:'Quebec', R:'Romeo', S:'Sierra', T:'Tango', U:'Uniform', V:'Victor', W:'Whiskey', X:'X-ray', Y:'Yankee', Z:'Zulu' };
   function spellLoc(loc) {
     const first = String(loc || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean)[0] || '';
     if (!/^[A-Za-z0-9]+$/.test(first)) return first;
-    if (lsGet('scan_letters', '1') === '1') {
-      return first.toUpperCase().split('').map(function(c){ return LETTER_SAY[c] || c; }).join('、');
-    }
+    const mode = lsGet('scan_letters', '0'); // 0=一般 2=英文代號 1=中文音
+    if (mode === '1') return first.toUpperCase().split('').map(function(c){ return LETTER_SAY[c] || c; }).join('、');
+    if (mode === '2') return first.toUpperCase().split('').map(function(c){ return NATO[c] || c; }).join('、');
     return first.split('').join(' ');
   }
   // QR 內容是網址 https://www2.cch.org.tw/Mdrug/MTACMH-O718651484#1,藥品碼就是 /Mdrug/ 後、「-」前的那段
@@ -819,13 +821,13 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   const rateBtn = document.getElementById('scanRateBtn');
   const letterBtn = document.getElementById('scanLetterBtn');
   function showRate() { rateBtn.textContent = '語速:' + RATES[rateIdx].n; }
-  function showLetter() { letterBtn.textContent = '字母:' + (lsGet('scan_letters', '1') === '1' ? '清楚唸法' : '一般唸法'); }
+  function showLetter() { const m = lsGet('scan_letters', '0'); letterBtn.textContent = '字母:' + (m === '2' ? '英文代號' : m === '1' ? '中文音' : '一般'); }
   rateBtn.addEventListener('click', function() {
     rateIdx = (rateIdx + 1) % RATES.length; lsSet('scan_rate', String(rateIdx)); showRate();
     speak(spellLoc('GZA01') + '，愛舒疼錠', true); // 切換後立刻試聽
   });
   letterBtn.addEventListener('click', function() {
-    lsSet('scan_letters', lsGet('scan_letters', '1') === '1' ? '0' : '1'); showLetter();
+    const m = lsGet('scan_letters', '0'); lsSet('scan_letters', m === '0' ? '2' : m === '2' ? '1' : '0'); showLetter();
     speak(spellLoc('GZA01') + '，愛舒疼錠', true);
   });
   showRate(); showLetter();
