@@ -1,9 +1,10 @@
-const CACHE_NAME = 'find-medicine-v8';
+const CACHE_NAME = 'find-medicine-v9';
 const ASSETS = ['./', './index.html', './manifest.json', './acorn-icon-192.png', './acorn-icon-512.png', './line-icon.png', './acorn-transparent.png'];
+const OPTIONAL_ASSETS = ['./pinyin-pro.js']; // 讀音工具:就算還沒上傳,也不會讓整個安裝失敗
 const FETCH_TIMEOUT = 3000; // 網路太慢時,等這麼久就直接用快取,不要一直卡著
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS).then(() => Promise.all(OPTIONAL_ASSETS.map((u) => cache.add(u).catch(() => {}))))));
   self.skipWaiting();
 });
 

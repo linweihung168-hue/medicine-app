@@ -82,6 +82,11 @@
   #swipeHint { position: fixed; left: 12px; top: 50%; transform: translateY(-50%) translateX(-8px); background: rgba(12,68,124,0.92); color: #fff; font-size: 12px; padding: 8px 12px; border-radius: 8px; white-space: nowrap; z-index: 6; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; }
   #swipeHint.show { opacity: 1; transform: translateY(-50%) translateX(0); }
 
+  .mic-btn { width: 38px; height: 38px; border-radius: 19px; border: none; background: transparent; display: none; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; margin-right: -8px; }
+  .mic-btn.on { background: #FCEBEB; animation: micpulse 1.1s ease-in-out infinite; }
+  .mic-btn.on svg { stroke: #B3261E; }
+  @keyframes micpulse { 50% { opacity: 0.55; } }
+  .voice-msg { font-size: 12.5px; color: #185FA5; padding: 8px 10px 4px; }
   #scanScreen { background: #EFF6FC; }
   .scan-top { display: flex; align-items: center; gap: 12px; padding: 16px; }
   .scan-title { font-size: 20px; font-weight: 700; color: #0C447C; }
@@ -230,6 +235,9 @@
       <div class="search-wrap">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="search" type="text" placeholder="搜尋藥名、藥品碼、料位號">
+        <button class="mic-btn" id="micBtn" aria-label="語音查詢">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+        </button>
       </div>
     </div>
 
@@ -315,13 +323,16 @@
   </button>
 </div>
 
+<script src="pinyin-pro.js"></script>
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-13a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-13b'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
+let voiceHits = null; // 語音查詢的結果(依相似度排序);不是 null 時,清單就顯示這個
+let voiceMsg = '';
 let activeCode = null;
 let editing = false;
 let saving = false;
@@ -349,6 +360,7 @@ function updateHomeView() {
 }
 
 function setFilter(name) {
+  voiceHits = null; voiceMsg = '';
   activeFilter = name;
   document.getElementById('search').value = '';
   renderCats();
@@ -540,6 +552,7 @@ const MENU_GROUPS = [
 ];
 
 function currentList() {
+  if (voiceHits) return voiceHits;
   let items = rawData;
   const filter = FILTERS.find(function(f){ return f.name === activeFilter; });
   if (filter) items = items.filter(filter.test);
@@ -597,8 +610,14 @@ function renderList() {
   const items = currentList();
   const list = document.getElementById('list');
   list.innerHTML = '';
+  if (voiceHits && voiceMsg) {
+    const vm = document.createElement('div');
+    vm.className = 'voice-msg';
+    vm.textContent = voiceMsg;
+    list.appendChild(vm);
+  }
   if (items.length === 0) {
-    list.innerHTML = '<p class="empty-msg">找不到符合的藥品</p>';
+    list.insertAdjacentHTML('beforeend', '<p class="empty-msg">找不到符合的藥品</p>');
     return;
   }
   const q = (document.getElementById('search').value || '').trim();
@@ -625,6 +644,7 @@ function renderList() {
   });
 }
 document.getElementById('search').addEventListener('input', function(){
+  voiceHits = null; voiceMsg = '';
   renderList();
   updateHomeView();
 });
@@ -665,6 +685,7 @@ document.getElementById('drawerRefreshBtn').addEventListener('click', function()
 });
 
 function goHome() {
+  voiceHits = null; voiceMsg = '';
   document.getElementById('search').value = '';
   activeFilter = null;
   renderCats();
@@ -762,21 +783,21 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     u.rate = 0.9;
     return u;
   }
-  function speak(text) {
+  function speak(text, once) {
     if (!window.speechSynthesis) return;
     const token = ++speakToken; // 有新的掃描或點擊時,舊的(含第二次)就不再唸
     speechSynthesis.cancel();
     const u1 = utter(text);
-    if (twice) {
+    if (twice && !once) {
       u1.onend = function() {
-        setTimeout(function() { if (token === speakToken) speechSynthesis.speak(utter(text)); }, 900);
+        setTimeout(function() { if (token === speakToken) speechSynthesis.speak(utter(text)); }, 400);
       };
     }
     speechSynthesis.speak(u1);
   }
   voiceSel.addEventListener('change', function() {
     lsSet('scan_voice', voiceSel.value);
-    speak('愛舒疼錠');
+    speak('愛舒疼錠', true);
   });
   function showTwice() { twiceBtn.textContent = '唸兩次:' + (twice ? '開' : '關'); }
   twiceBtn.addEventListener('click', function() {
@@ -882,7 +903,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
 
   startBtn.addEventListener('click', function() {
     // 瀏覽器規定要先有一次點擊才能發聲,所以每次進來都要按這個鈕
-    if (!listening) speak('開始掃碼');
+    if (!listening) speak('開始掃碼', true);
     listening = true;
     startBtn.classList.add('on');
     startBtn.textContent = '● 掃碼中(點這裡可重新對準)';
@@ -910,6 +931,131 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
 
   if (window.speechSynthesis) speechSynthesis.getVoices(); // 先觸發語音清單載入
   window.__scanTest = { cleanName: cleanName, spellLoc: spellLoc, parseCode: parseCode };
+  window.ScanVoice = { speak: speak, cleanName: cleanName, spellLoc: spellLoc };
+})();
+
+// ==================== 語音查詢(首頁搜尋框的麥克風:說藥名 → 依「讀音」比對 → 唸出料位號) ====================
+(function() {
+  const micBtn = document.getElementById('micBtn');
+  const searchEl = document.getElementById('search');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return; // 這個瀏覽器不支援語音辨識(例如部分 iPhone),就不顯示麥克風
+  micBtn.style.display = 'flex';
+
+  // 轉成「不分聲調的拼音」,並把台灣口音容易混的音當成同一個(zh=z、ch=c、sh=s、ing=in、eng=en、n=l)
+  function toSyllables(text) {
+    const t = String(text || '');
+    let arr;
+    if (window.pinyinPro) {
+      arr = window.pinyinPro.pinyin(t, { toneType: 'none', type: 'array', nonZh: 'removed' });
+    } else {
+      arr = t.replace(/[^一-鿿]/g, '').split(''); // 讀音工具沒載入時,退回逐字比對
+    }
+    return arr.map(function(x) {
+      return x.replace(/^zh/, 'z').replace(/^ch/, 'c').replace(/^sh/, 's').replace(/ng$/, 'n').replace(/^n/, 'l');
+    });
+  }
+  function initialOf(x) { const m = x.match(/^(b|p|m|f|d|t|l|g|k|h|j|q|x|z|c|s|r|y|w)/); return m ? m[1] : ''; }
+  function subCost(a, b) {
+    if (a === b) return 0;
+    const ia = initialOf(a), ib = initialOf(b);
+    if (ia === ib && ia !== '') return 0.5;                // 聲母相同
+    if (ia !== '' && ib !== '' && a.slice(ia.length) === b.slice(ib.length)) return 0.5; // 韻母相同
+    return 1;
+  }
+  // 把「你說的」整串對齊到「藥名」中任何一段,算出最小差異(例如說「愛舒疼」能對上「愛舒疼錠」)
+  function matchCost(q, n) {
+    const m = q.length, k = n.length;
+    if (!m || !k) return m;
+    let prev = new Array(k + 1).fill(0); // 藥名從任何位置開始都免費
+    for (let i = 1; i <= m; i++) {
+      const cur = new Array(k + 1);
+      cur[0] = i;
+      for (let j = 1; j <= k; j++) {
+        cur[j] = Math.min(prev[j - 1] + subCost(q[i - 1], n[j - 1]), prev[j] + 1, cur[j - 1] + 1);
+      }
+      prev = cur;
+    }
+    return Math.min.apply(null, prev);
+  }
+
+  let tieCount = 0;
+  const NUM = ['', '一', '兩', '三', '四', '五', '六', '七', '八'];
+  function searchByVoice(alts) {
+    const qs = alts.map(toSyllables).filter(function(q){ return q.length >= 2; });
+    if (!qs.length) return [];
+    const scored = [];
+    rawData.forEach(function(d) {
+      const name = window.ScanVoice.cleanName(d['俗名']).replace(/[\(（][^\)）]*[\)）]/g, '');
+      const ns = toSyllables(name);
+      if (!ns.length) return;
+      let best = 0;
+      qs.forEach(function(q, idx) {
+        const sc = 1 - matchCost(q, ns) / q.length - idx * 0.02; // 手機給的第 2、3…個備選答案,分數稍微打折
+        if (sc > best) best = sc;
+      });
+      best -= 0.02 * Math.max(0, ns.length - qs[0].length) / ns.length; // 藥名越接近你說的長度越前面
+      if (isDiscontinued(d)) best -= 0.05;
+      if (best >= 0.6) scored.push({ d: d, score: best });
+    });
+    scored.sort(function(a, b){ return b.score - a.score; });
+    tieCount = scored.length ? scored.filter(function(x){ return x.score >= scored[0].score - 0.03; }).length : 0; // 讀音幾乎一樣的藥有幾筆
+    return scored.slice(0, 8).map(function(x){ return x.d; });
+  }
+
+  let rec = null, listening = false;
+  const oldPlaceholder = searchEl.placeholder;
+  function ui(on, hint) {
+    listening = on;
+    micBtn.classList.toggle('on', on);
+    searchEl.placeholder = hint || oldPlaceholder;
+  }
+
+  function handle(alts) {
+    const heard = alts[0];
+    voiceHits = searchByVoice(alts);
+    voiceMsg = '聽到「' + heard + '」→ ' + (voiceHits.length ? '依讀音找到 ' + voiceHits.length + ' 筆(最像的排最前面)' : '沒有找到相近的藥名');
+    searchEl.value = heard;
+    renderList();
+    updateHomeView();
+    window.scrollTo({ top: 0 });
+    if (voiceHits.length) {
+      const d = voiceHits[0];
+      const sv = window.ScanVoice;
+      const loc = String(d['料位號'] || '').trim();
+      const pre = tieCount > 1 ? '有' + (NUM[Math.min(tieCount, 8)]) + '筆相近，第一筆：' : '';
+      sv.speak(pre + (sv.spellLoc(loc) || '無料位號') + '，' + sv.cleanName(d['俗名']));
+    } else {
+      window.ScanVoice.speak('找不到', true);
+    }
+  }
+
+  micBtn.addEventListener('click', function() {
+    if (listening) { try { rec.stop(); } catch (e) {} return; }
+    if (!rawData.length) { showErrModal('資料還沒載入,請稍等一下再試'); return; }
+    if (window.speechSynthesis) speechSynthesis.cancel(); // 避免手機把自己唸的聲音聽進去
+    rec = new SR();
+    rec.lang = 'zh-TW';
+    rec.interimResults = false;
+    rec.continuous = false;
+    rec.maxAlternatives = 5;
+    rec.onstart = function() { ui(true, '請說藥名…'); };
+    rec.onresult = function(e) {
+      const alts = [];
+      for (let i = 0; i < e.results[0].length; i++) alts.push(e.results[0][i].transcript);
+      handle(alts);
+    };
+    rec.onerror = function(e) {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showErrModal('麥克風沒有開啟權限。請到瀏覽器的網站設定,允許這個網站使用麥克風。');
+      else if (e.error === 'network') showErrModal('語音辨識需要連上網路,請確認手機有網路。');
+      else if (e.error === 'no-speech') ui(false, '沒聽到聲音,再按一次麥克風');
+      else if (e.error === 'audio-capture') showErrModal('找不到麥克風,請確認耳機或手機麥克風可以使用。');
+    };
+    rec.onend = function() { if (searchEl.placeholder === '請說藥名…') ui(false); else listening = false, micBtn.classList.remove('on'); };
+    try { rec.start(); } catch (e) { ui(false); }
+  });
+
+  window.__voiceTest = { searchByVoice: searchByVoice, toSyllables: toSyllables, handle: handle };
 })();
 
 // ==================== 版本資訊(改版紀錄,手動維護) ====================
