@@ -331,7 +331,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-13f'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-14c'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -808,7 +808,8 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     const t = String(text || '').trim();
     const m = t.match(/Mdrug\/([A-Za-z0-9]+)/i);
     if (m) return m[1];
-    if (/^[A-Za-z0-9*]{3,12}$/.test(t)) return t;
+    const t2 = t.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9*]{3,12}$/.test(t2)) return t2;
     return null;
   }
   // 資料庫的物品碼是「*」開頭(例如 *TACMH),QR 裡的藥品碼是 M 開頭(MTACMH),所以拿掉第一個字母再比
@@ -816,6 +817,15 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     const c1 = normalizeCode(code.slice(1)), c2 = normalizeCode(code);
     return rawData.find(function(d){ return normalizeCode(d['物品碼']) === c1; }) ||
            rawData.find(function(d){ return normalizeCode(d['物品碼']) === c2; });
+  }
+
+  // 手動輸入料位號(例如 AA239)時,用料位號找(次料位號不比對,只比「/」分開的每一段)
+  function findByLoc(text) {
+    const t = String(text || '').replace(/\s+/g, '').toLowerCase();
+    if (!t) return null;
+    return rawData.find(function(d){
+      return String(d['料位號'] || '').split('/').some(function(seg){ return seg.replace(/\s+/g, '').toLowerCase() === t; });
+    }) || null;
   }
 
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
@@ -902,7 +912,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (!rawData.length) { showBad('資料還沒載入', '資料還沒載入'); return; }
     const code = parseCode(text);
     if (!code) { showBad('讀不到藥品碼', '讀不到藥品碼'); return; }
-    const item = findByScanCode(code);
+    const item = findByScanCode(code) || findByLoc(text);
     if (!item) { showBad('查無此藥 ' + code, '查無此藥'); return; }
     const loc = String(item['料位號'] || '').trim();
     const name = cleanName(item['俗名']) || cleanName(item['品名與內含量']) || '';
@@ -1554,6 +1564,28 @@ let edgeGestureActive = false; // 選單開合／詳細頁返回這兩個手勢�
     if (mode === 'back') finishBack(false);
     else if (mode === 'drawer') snapTo(wasOpen);
   }, { passive: true });
+})();
+
+// ==================== 掃碼頁:右滑回到左側選單 ====================
+(function() {
+  const scr = document.getElementById('scanScreen');
+  const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let sx = 0, sy = 0, ok = false;
+  document.addEventListener('touchstart', function(e) {
+    ok = false;
+    if (!scr.classList.contains('active') || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (IS_IOS && t.clientX > 24) return; // iPhone 只吃左緣,和其他頁一致
+    sx = t.clientX; sy = t.clientY; ok = true;
+  }, { passive: true });
+  document.addEventListener('touchend', function(e) {
+    if (!ok) return;
+    ok = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+    if (dx > 80 && dx > dy * 1.5) { document.getElementById('scanBackBtn').click(); openDrawer(); } // 返回後直接開左側選單
+  }, { passive: true });
+  document.addEventListener('touchcancel', function() { ok = false; }, { passive: true });
 })();
 
 // ==================== 手勢與導覽：首次登入的滑動提示 ====================
