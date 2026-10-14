@@ -27,9 +27,9 @@
 
   .topbar { display: flex; align-items: center; gap: 10px; padding: 18px 16px 12px; }
   .icon-btn { width: 52px; height: 52px; border-radius: 14px; background: #fff; border: 0.5px solid #B5D4F4; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
-  .search-wrap { flex: 1; display: flex; align-items: center; background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; height: 52px; padding: 0 16px; gap: 10px; }
+  .search-wrap { flex: 1; min-width: 0; display: flex; align-items: center; background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; height: 52px; padding: 0 16px; gap: 10px; }
   .search-wrap svg { flex-shrink: 0; }
-  #search { flex: 1; height: 100%; border: none; background: transparent; font-size: 17px; outline: none; padding: 0; }
+  #search { flex: 1; min-width: 0; height: 100%; border: none; background: transparent; font-size: 17px; outline: none; padding: 0; }
 
   .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 10px; font-size: 11px; color: #7699B8; }
 
@@ -83,6 +83,8 @@
   #swipeHint.show { opacity: 1; transform: translateY(-50%) translateX(0); }
 
   .mic-btn { width: 38px; height: 38px; border-radius: 19px; border: none; background: transparent; display: none; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; margin-right: -8px; }
+  .mode-pill { flex-shrink: 0; border: 0.5px solid #B5D4F4; background: #fff; color: #185FA5; border-radius: 12px; font-size: 12px; padding: 4px 9px; margin-right: -2px; white-space: nowrap; }
+  .mode-pill.ud { background: #185FA5; color: #fff; border-color: #185FA5; }
   .mic-btn.on { background: #FCEBEB; animation: micpulse 1.1s ease-in-out infinite; }
   .mic-btn.on svg { stroke: #B3261E; }
   @keyframes micpulse { 50% { opacity: 0.55; } }
@@ -242,6 +244,7 @@
       <div class="search-wrap">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="search" type="text" placeholder="搜尋藥名、藥品碼、料位號">
+        <button class="mode-pill" id="modeBtn" aria-label="語音模式" style="display:none">調劑</button>
         <button class="mic-btn" id="micBtn" aria-label="語音查詢">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
         </button>
@@ -331,7 +334,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-14c'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-14d'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -796,10 +799,26 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     return doseText(item).split('/').map(function(x){ return x.trim(); })
       .filter(function(x){ return x && !/^(tab|cap|btl|vial|amp|錠|膠囊|瓶|支)/i.test(x); }).map(unitSay).join('、');
   }
-  // 報讀內容:藥包機 →「藥包機,藥名,請注意數量」;其他 →「料位號,藥名」(withDose 為真才加劑量)
-  function buildSay(item, withDose) {
+  // 報讀內容:藥包機 →「藥包機,藥名,請核對包數」;其他 →「料位號,藥名」(withDose 為真才加劑量)
+  // UD 專用區欄位(試算表最右邊自己加的欄,標題要叫「UD少用藥區」)
+  function udSpecial(item) {
+    const v = String(item['UD少用藥區'] || '').trim();
+    if (!v) return '';
+    return /^[VvYy1是○✓✔]$/.test(v) ? '少用藥區' : v; // 只打記號就唸「少用藥區」,打字就照唸
+  }
+  // UD 模式的料位號:「/」後面那段;沒有「/」就用前面調劑檯的
+  function udLoc(item) {
+    const segs = String(item['料位號'] || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean);
+    return segs.length > 1 ? segs[1] : (segs[0] || '');
+  }
+  function buildSay(item, withDose, ud) {
     const name = cleanName(item['俗名']) || cleanName(item['品名與內含量']) || '';
-    if (isPacker(item)) return '藥包機，' + name + '，請注意數量';
+    if (ud) {
+      const sp = udSpecial(item);
+      if (sp) return sp + '，' + name;
+      if (!isPacker(item)) return (spellLoc(udLoc(item)) || '無料位號') + '，' + name + (withDose && doseSay(item) ? '，' + doseSay(item) : '');
+    }
+    if (isPacker(item)) return '藥包機，' + name + '，請核對包數';
     const loc = String(item['料位號'] || '').trim();
     return (spellLoc(loc) || '無料位號') + '，' + name + (withDose && doseSay(item) ? '，' + doseSay(item) : '');
   }
@@ -923,7 +942,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     const status = String(item['狀態'] || '').trim();
     const dose = doseText(item);
     resultBox.innerHTML = '<div class="loc">' + esc(packer ? '藥包機' : (loc || '無料位號')) + '</div><div class="nm">' + esc(name) + '</div>' +
-      (packer ? '<div class="warn">請注意數量(' + esc(loc) + ')</div>' : '') +
+      (packer ? '<div class="warn">請核對包數(' + esc(loc) + ')</div>' : '') +
       (dose ? '<div class="st">劑量:' + esc(dose) + '</div>' : '') +
       (status ? '<div class="st">狀態:' + esc(status) + '</div>' : '');
     speak(say);
@@ -1010,7 +1029,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
 
   if (window.speechSynthesis) speechSynthesis.getVoices(); // 先觸發語音清單載入
   window.__scanTest = { cleanName: cleanName, spellLoc: spellLoc, parseCode: parseCode };
-  window.ScanVoice = { speak: speak, cleanName: cleanName, spellLoc: spellLoc, isPacker: isPacker, doseText: doseText, doseSay: doseSay, buildSay: buildSay };
+  window.ScanVoice = { udSpecial: udSpecial, udLoc: udLoc, speak: speak, cleanName: cleanName, spellLoc: spellLoc, isPacker: isPacker, doseText: doseText, doseSay: doseSay, buildSay: buildSay };
 })();
 
 // ==================== 語音查詢(首頁搜尋框的麥克風:說藥名 → 依「讀音」比對 → 唸出料位號) ====================
@@ -1020,6 +1039,17 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return; // 這個瀏覽器不支援語音辨識(例如部分 iPhone),就不顯示麥克風
   micBtn.style.display = 'flex';
+  // 語音模式:調劑(念調劑檯料位號) / UD(念「/」後面的料位號、少用藥區)
+  const modeBtn = document.getElementById('modeBtn');
+  let udMode = false;
+  try { udMode = localStorage.getItem('voice_mode') === 'ud'; } catch (e) {}
+  function paintMode() { modeBtn.textContent = udMode ? 'UD' : '調劑'; modeBtn.classList.toggle('ud', udMode); }
+  modeBtn.style.display = 'inline-block';
+  paintMode();
+  modeBtn.addEventListener('click', function() {
+    udMode = !udMode; paintMode();
+    try { localStorage.setItem('voice_mode', udMode ? 'ud' : 'disp'); } catch (e) {}
+  });
 
   // 轉成「不分聲調的拼音」,並把台灣口音容易混的音當成同一個(zh=z、ch=c、sh=s、ing=in、eng=en、n=l)
   function toSyllables(text) {
@@ -1130,7 +1160,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     let hits = searchByVoice(parsed.map(function(x){ return x.name; }));
     const scores = lastScores.slice();
     const sv = window.ScanVoice;
-    let msg = '聽到「' + heard + '」→ ';
+    let msg = (udMode ? '[UD 模式] ' : '') + '聽到「' + heard + '」→ ';
     let doseMissing = false, withDose = false;
 
     if (dose !== null && hits.length) {
@@ -1173,10 +1203,24 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
         renderList();
       }
     }
-    sv.speak(pre + sv.buildSay(top, withDose) + post);
+    sv.speak(pre + sv.buildSay(top, withDose, udMode) + post);
   }
 
+  // 提示音:短短一聲(用瀏覽器自己合成,不用音檔)
+  let actx = null;
+  function beep() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      if (!actx) actx = new AC();
+      if (actx.state === 'suspended') actx.resume();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.12;
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + 0.12);
+    } catch (e) {}
+  }
   micBtn.addEventListener('click', function() {
+    try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) { if (!actx) actx = new AC(); if (actx.state === 'suspended') actx.resume(); } } catch (e) {} // 趁使用者點擊時先解鎖聲音
     if (listening) { try { rec.stop(); } catch (e) {} return; }
     if (!rawData.length) { showErrModal('資料還沒載入,請稍等一下再試'); return; }
     if (window.speechSynthesis) speechSynthesis.cancel(); // 避免手機把自己唸的聲音聽進去
@@ -1185,19 +1229,32 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     rec.interimResults = false;
     rec.continuous = false;
     rec.maxAlternatives = 5;
-    rec.onstart = function() { ui(true, '請說藥名…'); };
+    let gotResult = false, gotError = false, retried = false, retryDone = false;
+    rec.onstart = function() { ui(true, '準備中…'); };
+    rec.onaudiostart = function() { ui(true, '請說藥名…'); beep(); }; // 麥克風真的開始收音才提示(iPhone 沒有系統叮聲,自己加)
     rec.onresult = function(e) {
+      gotResult = true;
       const alts = [];
       for (let i = 0; i < e.results[0].length; i++) alts.push(e.results[0][i].transcript);
       handle(alts);
     };
     rec.onerror = function(e) {
+      gotError = true;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showErrModal('麥克風沒有開啟權限。請到瀏覽器的網站設定,允許這個網站使用麥克風。');
       else if (e.error === 'network') showErrModal('語音辨識需要連上網路,請確認手機有網路。');
       else if (e.error === 'no-speech') ui(false, '沒聽到聲音,再按一次麥克風');
-      else if (e.error === 'audio-capture') showErrModal('找不到麥克風,請確認耳機或手機麥克風可以使用。');
+      else if (e.error === 'audio-capture') {
+        // iPhone 常因為前一句語音還沒放完、麥克風被占住,稍等一下自動再試一次
+        if (!retried) { retried = true; gotError = false; setTimeout(function(){ try { rec.start(); } catch (x) { ui(false); showErrModal('找不到麥克風,請確認沒有連著藍牙耳機,或稍後再按一次。'); } }, 500); return; }
+        showErrModal('找不到麥克風,請確認耳機或手機麥克風可以使用。');
+      }
     };
-    rec.onend = function() { if (searchEl.placeholder === '請說藥名…') ui(false); else listening = false, micBtn.classList.remove('on'); };
+    rec.onend = function() {
+      if (retried && !gotResult && !gotError && !retryDone) { retryDone = true; return; }
+      listening = false; micBtn.classList.remove('on');
+      if (searchEl.placeholder === '請說藥名…' || searchEl.placeholder === '準備中…') searchEl.placeholder = oldPlaceholder;
+      if (!gotResult && !gotError) ui(false, '沒聽到聲音,再按一次麥克風'); // iPhone 有時辨識會默默結束
+    };
     try { rec.start(); } catch (e) { ui(false); }
   });
 
