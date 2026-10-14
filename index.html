@@ -334,7 +334,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-14e'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-14f'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -879,7 +879,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (!window.speechSynthesis) return;
     const token = ++speakToken; // 有新的掃描或點擊時,舊的(含第二次)就不再唸
     speechSynthesis.cancel();
-    const u1 = utter(text);
+    const u1 = utter('，，' + text); // 開頭墊一小段停頓:喇叭/耳機剛醒來會吃掉前 1、2 個字,第二遍不需要
     if (twice && !once) {
       u1.onend = function() {
         setTimeout(function() { if (token === speakToken) speechSynthesis.speak(utter(text)); }, 400);
