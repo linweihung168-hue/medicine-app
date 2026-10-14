@@ -334,7 +334,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-14d'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-14e'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -887,6 +887,15 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     }
     speechSynthesis.speak(u1);
   }
+  // iPhone 規定:一定要在「手指點擊」當下先出過一次聲音,之後(例如語音辨識完)程式才能自己開口。這裡用音量 0 的空白字先解鎖。
+  function unlockSpeech() {
+    try {
+      if (!window.speechSynthesis) return;
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
   const rateBtn = document.getElementById('scanRateBtn');
   function showRate() { rateBtn.textContent = '語速:' + RATES[rateIdx].n; }
   rateBtn.addEventListener('click', function() {
@@ -1016,6 +1025,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     startBtn.classList.remove('on');
     startBtn.textContent = '開始掃碼';
     showScreen('scanScreen');
+    unlockSpeech();
     window.scrollTo({ top: 0 });
   });
   document.getElementById('scanBackBtn').addEventListener('click', function() {
@@ -1029,7 +1039,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
 
   if (window.speechSynthesis) speechSynthesis.getVoices(); // 先觸發語音清單載入
   window.__scanTest = { cleanName: cleanName, spellLoc: spellLoc, parseCode: parseCode };
-  window.ScanVoice = { udSpecial: udSpecial, udLoc: udLoc, speak: speak, cleanName: cleanName, spellLoc: spellLoc, isPacker: isPacker, doseText: doseText, doseSay: doseSay, buildSay: buildSay };
+  window.ScanVoice = { unlockSpeech: unlockSpeech, udSpecial: udSpecial, udLoc: udLoc, speak: speak, cleanName: cleanName, spellLoc: spellLoc, isPacker: isPacker, doseText: doseText, doseSay: doseSay, buildSay: buildSay };
 })();
 
 // ==================== 語音查詢(首頁搜尋框的麥克風:說藥名 → 依「讀音」比對 → 唸出料位號) ====================
@@ -1153,6 +1163,18 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   }
   function doseNumbers(d) { return (window.ScanVoice.doseText(d).match(/\d+(?:\.\d+)?/g) || []).map(parseFloat); }
 
+  // 辨識還沒完全結束時,iPhone 的喇叭還被麥克風占著(會變很小聲或不出聲),所以等辨識結束再唸
+  let pendingSay = null, pendingTimer = null;
+  function deferSpeak(text, once) {
+    pendingSay = { text: text, once: once };
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(flushSay, 1500); // 保險:萬一 onend 沒來也會唸
+  }
+  function flushSay() {
+    clearTimeout(pendingTimer);
+    const p = pendingSay; pendingSay = null;
+    if (p) setTimeout(function(){ window.ScanVoice.speak(p.text, p.once); }, 250);
+  }
   function handle(alts) {
     const heard = alts[0];
     const parsed = alts.map(parseSpoken);
@@ -1182,8 +1204,8 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     searchEl.value = heard;
     renderList(); updateHomeView(); window.scrollTo({ top: 0 });
 
-    if (!hits.length) { sv.speak('找不到', true); return; }
-    if (doseMissing) { sv.speak('沒有這個劑量', true); return; }
+    if (!hits.length) { deferSpeak('找不到', true); return; }
+    if (doseMissing) { deferSpeak('沒有這個劑量', true); return; }
     const top = hits[0];
     const topName = sv.cleanName(top['俗名']);
     let pre = '', post = '';
@@ -1203,7 +1225,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
         renderList();
       }
     }
-    sv.speak(pre + sv.buildSay(top, withDose, udMode) + post);
+    deferSpeak(pre + sv.buildSay(top, withDose, udMode) + post);
   }
 
   // 提示音:短短一聲(用瀏覽器自己合成,不用音檔)
@@ -1224,6 +1246,8 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (listening) { try { rec.stop(); } catch (e) {} return; }
     if (!rawData.length) { showErrModal('資料還沒載入,請稍等一下再試'); return; }
     if (window.speechSynthesis) speechSynthesis.cancel(); // 避免手機把自己唸的聲音聽進去
+    window.ScanVoice.unlockSpeech(); // iPhone:趁點擊當下解鎖,辨識完才唸得出來
+    pendingSay = null;
     rec = new SR();
     rec.lang = 'zh-TW';
     rec.interimResults = false;
@@ -1250,6 +1274,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
       }
     };
     rec.onend = function() {
+      flushSay();
       if (retried && !gotResult && !gotError && !retryDone) { retryDone = true; return; }
       listening = false; micBtn.classList.remove('on');
       if (searchEl.placeholder === '請說藥名…' || searchEl.placeholder === '準備中…') searchEl.placeholder = oldPlaceholder;
