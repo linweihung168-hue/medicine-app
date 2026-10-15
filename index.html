@@ -337,7 +337,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-15b'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-15c'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -878,11 +878,12 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     u.rate = RATES[rateIdx].v;
     return u;
   }
-  function speak(text, once) {
+  function speak(text, once, onStart) {
     if (!window.speechSynthesis) return;
     const token = ++speakToken; // 有新的掃描或點擊時,舊的(含第二次)就不再唸
     speechSynthesis.cancel();
-    const u1 = utter('，，' + text); // 開頭墊一小段停頓:喇叭/耳機剛醒來會吃掉前 1、2 個字,第二遍不需要
+    const u1 = utter('，，' + text);
+    if (onStart) u1.onstart = function() { u1.onstart = null; onStart(); }; // 開頭墊一小段停頓:喇叭/耳機剛醒來會吃掉前 1、2 個字,第二遍不需要
     if (twice && !once) {
       u1.onend = function() {
         setTimeout(function() { if (token === speakToken) speechSynthesis.speak(utter(text)); }, 400);
@@ -1172,16 +1173,29 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   function doseNumbers(d) { return (window.ScanVoice.doseText(d).match(/\d+(?:\.\d+)?/g) || []).map(parseFloat); }
 
   // 辨識還沒完全結束時,iPhone 的喇叭還被麥克風占著(會變很小聲或不出聲),所以等辨識結束再唸
+  // Android 不用等,辨識結果一出來就唸;iPhone 才等辨識結束
+  const IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let pendingSay = null, pendingTimer = null;
+  let tSpeechEnd = 0, tResult = 0; // 計時用(毫秒)
   function deferSpeak(text, once) {
     pendingSay = { text: text, once: once };
     clearTimeout(pendingTimer);
+    if (!IOS) { flushSay(); return; }
     pendingTimer = setTimeout(flushSay, 1500); // 保險:萬一 onend 沒來也會唸
   }
   function flushSay() {
     clearTimeout(pendingTimer);
     const p = pendingSay; pendingSay = null;
-    if (p) setTimeout(function(){ window.ScanVoice.speak(p.text, p.once); }, 250);
+    if (!p) return;
+    setTimeout(function(){
+      window.ScanVoice.speak(p.text, p.once, function() {
+        // 計時:說完話到辨識出結果、辨識出結果到手機開口,各花多久
+        const now = performance.now();
+        const rec1 = tSpeechEnd ? ((tResult - tSpeechEnd) / 1000).toFixed(1) : '?';
+        const gap = ((now - tResult) / 1000).toFixed(1);
+        if (voiceHits && voiceMsg) { voiceMsg += ' ⏱ 辨識 ' + rec1 + ' 秒 · 開口 ' + gap + ' 秒'; renderList(); }
+      });
+    }, IOS ? 150 : 0);
   }
   function handle(alts) {
     const heard = alts[0];
@@ -1254,6 +1268,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (listening) { try { rec.stop(); } catch (e) {} return; }
     if (!rawData.length) { showErrModal('資料還沒載入,請稍等一下再試'); return; }
     if (window.speechSynthesis) speechSynthesis.cancel(); // 避免手機把自己唸的聲音聽進去
+    tSpeechEnd = 0; tResult = 0;
     window.ScanVoice.unlockSpeech(); // iPhone:趁點擊當下解鎖,辨識完才唸得出來
     pendingSay = null;
     rec = new SR();
@@ -1263,9 +1278,10 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     rec.maxAlternatives = 5;
     let gotResult = false, gotError = false, retried = false, retryDone = false;
     rec.onstart = function() { ui(true, '準備中…'); };
+    rec.onspeechend = function() { tSpeechEnd = performance.now(); };
     rec.onaudiostart = function() { ui(true, '請說藥名…'); beep(); }; // 麥克風真的開始收音才提示(iPhone 沒有系統叮聲,自己加)
     rec.onresult = function(e) {
-      gotResult = true;
+      gotResult = true; tResult = performance.now();
       const alts = [];
       for (let i = 0; i < e.results[0].length; i++) alts.push(e.results[0][i].transcript);
       handle(alts);
