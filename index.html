@@ -338,7 +338,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-16f'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-16g'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -781,7 +781,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     return t.trim() || orig;
   }
   // 字母唸法:大多數字母照原本唸;唸起來會混的字母改用中文字(之後有字母唸錯,把它加進這張表就好)。資料裡有「/」時只唸第一個
-  const LETTER_SAY = { X: '叉', Z: '力', L: 'ㄟ露', B: '逼' };
+  const LETTER_SAY = { X: '叉', Z: '力', L: '欸喔', B: '逼' };
   function spellLoc(loc) {
     const first = String(loc || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean)[0] || '';
     // 一個字一個字處理:英文字母數字照規則換音,中文字(例如「共」)和符號原樣保留,避免整串被當成英文唸
