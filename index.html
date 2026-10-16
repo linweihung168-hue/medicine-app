@@ -338,7 +338,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-16b'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-16c'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -972,12 +972,31 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (listening) scanInput.focus();
   }
 
+  // 掃描器是一個字一個字「打」進來的,網址後面那串(O718651484#1)我們用不到。
+  // 藥品碼一出現(看到「-」)就立刻處理,剩下的字直接丟掉,不用等整串打完。
+  let tail = false, tailTimer = null;
+  function endTail() { tail = false; clearTimeout(tailTimer); }
   scanInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); flush(); }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (tail) { scanInput.value = ''; endTail(); return; } // 這筆已經處理過了,Enter 只是結尾
+    flush();
   });
-  // 有些掃描器掃完不送 Enter:網址完整(已出現「-」)且停頓 0.4 秒就自動處理
   scanInput.addEventListener('input', function() {
     clearTimeout(idleTimer);
+    if (tail) { // 剛處理完的那一筆還在打尾巴 → 丟掉,停頓 0.4 秒就算結束
+      scanInput.value = '';
+      clearTimeout(tailTimer); tailTimer = setTimeout(endTail, 400);
+      return;
+    }
+    if (!manual && /Mdrug\/[A-Za-z0-9]+-/i.test(scanInput.value)) {
+      const text = scanInput.value.trim();
+      scanInput.value = '';
+      tail = true; clearTimeout(tailTimer); tailTimer = setTimeout(endTail, 400);
+      handleScan(text);
+      return;
+    }
+    // 其他格式的條碼(沒有網址):沒送 Enter 時,停頓 0.4 秒也處理
     idleTimer = setTimeout(function() {
       if (/Mdrug\/[A-Za-z0-9]+-/i.test(scanInput.value)) flush();
     }, 400);
