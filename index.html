@@ -303,7 +303,7 @@
   <div class="scan-body">
     <button id="scanStartBtn">開始掃碼</button>
     <div id="scanHint">掃描藥袋上的 QR Code</div>
-    <input id="scanInput" type="text" inputmode="none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
+    <input id="scanInput" type="password" lang="en" inputmode="none" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
     <div class="scan-tools"><span id="scanLockMsg"></span><span class="scan-btns"><button id="scanRateBtn">語速:慢</button><button id="scanManualBtn">手動輸入測試</button></span></div>
     <div id="scanResult"></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
@@ -338,7 +338,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-15d'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-16b'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -1008,6 +1008,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   manualBtn.addEventListener('click', function() {
     manual = !manual;
     scanInput.setAttribute('inputmode', manual ? 'text' : 'none');
+    scanInput.setAttribute('type', manual ? 'text' : 'password'); // 掃描時用密碼欄位:手機會強制用英文,不會被注音輸入法轉成中文
     manualBtn.textContent = manual ? '關閉手動輸入' : '手動輸入測試';
     scanInput.placeholder = manual ? '輸入藥品碼(如 MTACMH)後按 Enter' : '掃描器會輸入到這裡';
     scanInput.blur();
@@ -1027,7 +1028,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   document.getElementById('scanBtn').addEventListener('click', function() {
     closeDrawer();
     listening = false;
-    manual = false; scanInput.setAttribute('inputmode', 'none'); manualBtn.textContent = '手動輸入測試'; scanInput.placeholder = '掃描器會輸入到這裡';
+    manual = false; scanInput.setAttribute('inputmode', 'none'); scanInput.setAttribute('type', 'password'); manualBtn.textContent = '手動輸入測試'; scanInput.placeholder = '掃描器會輸入到這裡';
     startBtn.classList.remove('on');
     startBtn.textContent = '開始掃碼';
     showScreen('scanScreen');
