@@ -338,7 +338,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-16e'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-16f'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -816,8 +816,13 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     const segs = String(item['料位號'] || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean);
     return segs.length > 1 ? segs[1] : (segs[0] || '');
   }
+  // 讀音替換表:只改「唸出來的字」,畫面上的藥名不變。左邊是藥名裡的字,右邊是唸的時候換成的字。
+  const SPEECH_FIX = { '樂': '仂' };
+  function speechName(n) {
+    return String(n).replace(/./g, function(c){ return SPEECH_FIX[c] || c; });
+  }
   function buildSay(item, withDose, ud) {
-    const name = cleanName(item['俗名']) || cleanName(item['品名與內含量']) || '';
+    const name = speechName(cleanName(item['俗名']) || cleanName(item['品名與內含量']) || '');
     if (ud) {
       const sp = udSpecial(item);
       if (sp) return sp + '，' + name;
@@ -962,10 +967,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
       (packer ? '<div class="warn">請核對包數(' + esc(loc) + ')</div>' : '') +
       (dose ? '<div class="st">劑量:' + esc(dose) + '</div>' : '') +
       (status ? '<div class="st">狀態:' + esc(status) + '</div>' : '');
-    speak(say, false, function() {
-      const t2 = performance.now();
-      resultBox.insertAdjacentHTML('beforeend', '<div class="st">⏱ 收字 ' + ((tDet - tF) / 1000).toFixed(1) + ' 秒 · 開口 ' + ((t2 - tDet) / 1000).toFixed(1) + ' 秒</div>');
-    });
+    speak(say, false);
     addHistory({ loc: packer ? '藥包機' : (loc || '無'), name: name, say: say });
   }
 
