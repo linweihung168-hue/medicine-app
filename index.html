@@ -303,7 +303,7 @@
   <div class="scan-body">
     <button id="scanStartBtn">開始掃碼</button>
     <div id="scanHint">掃描藥袋上的 QR Code</div>
-    <input id="scanInput" type="password" lang="en" inputmode="none" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
+    <input id="scanInput" type="url" lang="en" inputmode="none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
     <div class="scan-tools"><span id="scanLockMsg"></span><span class="scan-btns"><button id="scanRateBtn">語速:慢</button><button id="scanManualBtn">手動輸入測試</button></span></div>
     <div id="scanResult"></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
@@ -338,7 +338,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-16c'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-16d'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -942,7 +942,9 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     addHistory({ loc: '✕', name: msg, say: say, bad: true });
   }
 
+  let tFirst = 0; // 計時用:掃描器打出第一個字的時間
   function handleScan(text) {
+    const tDet = performance.now(), tF = tFirst || tDet; tFirst = 0;
     if (!rawData.length) { showBad('資料還沒載入', '資料還沒載入'); return; }
     const code = parseCode(text);
     if (!code) { showBad('讀不到藥品碼', '讀不到藥品碼'); return; }
@@ -960,7 +962,10 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
       (packer ? '<div class="warn">請核對包數(' + esc(loc) + ')</div>' : '') +
       (dose ? '<div class="st">劑量:' + esc(dose) + '</div>' : '') +
       (status ? '<div class="st">狀態:' + esc(status) + '</div>' : '');
-    speak(say);
+    speak(say, false, function() {
+      const t2 = performance.now();
+      resultBox.insertAdjacentHTML('beforeend', '<div class="st">⏱ 收字 ' + ((tDet - tF) / 1000).toFixed(1) + ' 秒 · 開口 ' + ((t2 - tDet) / 1000).toFixed(1) + ' 秒</div>');
+    });
     addHistory({ loc: packer ? '藥包機' : (loc || '無'), name: name, say: say });
   }
 
@@ -984,6 +989,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   });
   scanInput.addEventListener('input', function() {
     clearTimeout(idleTimer);
+    if (!tail && !tFirst) tFirst = performance.now();
     if (tail) { // 剛處理完的那一筆還在打尾巴 → 丟掉,停頓 0.4 秒就算結束
       scanInput.value = '';
       clearTimeout(tailTimer); tailTimer = setTimeout(endTail, 400);
@@ -1027,7 +1033,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   manualBtn.addEventListener('click', function() {
     manual = !manual;
     scanInput.setAttribute('inputmode', manual ? 'text' : 'none');
-    scanInput.setAttribute('type', manual ? 'text' : 'password'); // 掃描時用密碼欄位:手機會強制用英文,不會被注音輸入法轉成中文
+    scanInput.setAttribute('type', manual ? 'text' : 'url'); // 掃描時用網址欄位:手機會用英文輸入,不會被注音輸入法轉成中文(也不會跳出儲存密碼)
     manualBtn.textContent = manual ? '關閉手動輸入' : '手動輸入測試';
     scanInput.placeholder = manual ? '輸入藥品碼(如 MTACMH)後按 Enter' : '掃描器會輸入到這裡';
     scanInput.blur();
@@ -1047,7 +1053,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   document.getElementById('scanBtn').addEventListener('click', function() {
     closeDrawer();
     listening = false;
-    manual = false; scanInput.setAttribute('inputmode', 'none'); scanInput.setAttribute('type', 'password'); manualBtn.textContent = '手動輸入測試'; scanInput.placeholder = '掃描器會輸入到這裡';
+    manual = false; scanInput.setAttribute('inputmode', 'none'); scanInput.setAttribute('type', 'url'); manualBtn.textContent = '手動輸入測試'; scanInput.placeholder = '掃描器會輸入到這裡';
     startBtn.classList.remove('on');
     startBtn.textContent = '開始掃碼';
     showScreen('scanScreen');
