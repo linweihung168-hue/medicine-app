@@ -106,6 +106,8 @@
   .scan-btns { display: flex; gap: 6px; flex-shrink: 0; }
   .scan-btns button { white-space: nowrap; }
   #scanRateBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
+  #scanVoiceBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
+  #scanVoiceName { font-size: 11.5px; color: #7699B8; text-align: center; margin-top: -4px; word-break: break-all; }
   #scanManualBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
   .scan-tools2 { display: flex; gap: 8px; align-items: center; margin-top: -4px; }
   #scanVoiceSel { flex: 1; min-width: 0; height: 36px; border-radius: 10px; border: 0.5px solid #B5D4F4; background: #fff; color: #2E4E6B; font-size: 13px; padding: 0 8px; }
@@ -304,7 +306,8 @@
     <button id="scanStartBtn">開始掃碼</button>
     <div id="scanHint">掃描藥袋上的 QR Code</div>
     <input id="scanInput" type="password" lang="en" inputmode="none" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
-    <div class="scan-tools"><span id="scanLockMsg"></span><span class="scan-btns"><button id="scanRateBtn">語速:慢</button><button id="scanManualBtn">手動輸入測試</button></span></div>
+    <div class="scan-tools"><span id="scanLockMsg"></span><span class="scan-btns"><button id="scanRateBtn">語速:慢</button><button id="scanVoiceBtn">聲音:自動</button><button id="scanManualBtn">手動輸入測試</button></span></div>
+    <div id="scanVoiceName"></div>
     <div id="scanResult"></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
     <div id="scanHistory"></div>
@@ -338,7 +341,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-16h'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-17a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -781,7 +784,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     return t.trim() || orig;
   }
   // 字母唸法:大多數字母照原本唸;唸起來會混的字母改用中文字(之後有字母唸錯,把它加進這張表就好)。資料裡有「/」時只唸第一個
-  const LETTER_SAY = { X: '叉', Z: '力', L: 'ㄟ喔', B: '逼' };
+  const LETTER_SAY = { X: '叉', Z: '力', L: '欸摟', B: '逼' };
   function spellLoc(loc) {
     const first = String(loc || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean)[0] || '';
     // 一個字一個字處理:英文字母數字照規則換音,中文字(例如「共」)和符號原樣保留,避免整串被當成英文唸
@@ -877,7 +880,12 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     const pool = tw.length ? tw : ok;
     return pool.find(function(v){ return v.localService; }) || pool[0] || null;
   }
-  function pickVoice() { return autoVoice(); }
+  function okVoices() { return zhVoices().filter(function(v){ return !isCantonese(v); }); }
+  function pickVoice() {
+    const saved = lsGet('scan_voice', '');
+    if (saved) { const f = okVoices().find(function(v){ return v.name === saved; }); if (f) return f; }
+    return autoVoice();
+  }
   function utter(text) {
     const u = new SpeechSynthesisUtterance(text);
     const v = pickVoice();
@@ -914,6 +922,25 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     speak(spellLoc('GZA01') + '，愛舒疼錠', true); // 切換後立刻試聽
   });
   showRate();
+  const voiceBtn = document.getElementById('scanVoiceBtn'), voiceName = document.getElementById('scanVoiceName');
+  function showVoice() {
+    const list = okVoices(), cur = pickVoice(), saved = lsGet('scan_voice', '');
+    const idx = cur ? list.indexOf(cur) : -1;
+    voiceBtn.textContent = '聲音:' + (saved && idx >= 0 ? (idx + 1) + '/' + list.length : '自動');
+    voiceName.textContent = list.length ? ('目前:' + (cur ? cur.name + ' (' + cur.lang + ')' : '系統預設') + ' ・ 手機共有 ' + list.length + ' 個中文聲音') : '這支手機沒有偵測到中文聲音';
+  }
+  voiceBtn.addEventListener('click', function() {
+    const list = okVoices();
+    if (!list.length) { showVoice(); return; }
+    const saved = lsGet('scan_voice', '');
+    const cur = saved ? list.findIndex(function(v){ return v.name === saved; }) : -1;
+    const next = cur + 1; // 自動 → 1 → 2 → … → 最後一個 → 回到自動
+    if (next >= list.length) lsSet('scan_voice', ''); else lsSet('scan_voice', list[next].name);
+    showVoice();
+    speak(spellLoc('GZA01') + '，愛舒疼錠', true);
+  });
+  showVoice();
+  if (window.speechSynthesis) speechSynthesis.addEventListener('voiceschanged', showVoice);
   if (window.speechSynthesis) speechSynthesis.getVoices(); // 先觸發語音清單載入(手機的語音是慢慢載入的)
 
   function esc(s) { return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
