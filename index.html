@@ -347,7 +347,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-18e'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-19a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -506,6 +506,10 @@ function validLoc2(val) {
   const s = String(val || '').trim();
   if (!s) return '';
   return /^[A-Za-z]/.test(s) ? s : '';
+}
+// 藥包機的藥:料位號以 AA 開頭。這類藥由撕單人員放進籃子,調劑時不用找,所以藥櫃區直接顯示「藥包機」
+function isPackerItem(item) {
+  return /^AA/i.test(String(item['料位號'] || '').split('/')[0].trim());
 }
 function displayPlace(item) {
   const manual = item['放置區'] || '';
@@ -708,7 +712,7 @@ function renderList() {
       matchedHiddenFieldLine(d, q) +
       '<div class="tags">' +
         '<span class="tag tag-loc">' + highlightText(d['料位號'] || '未設定', q) + '</span>' +
-        '<span class="tag ' + (place ? 'tag-place-set' : 'tag-place-unset') + '">藥櫃區:' + (place || '尚未設定') + '</span>' +
+        (isPackerItem(d) ? '<span class="tag tag-place-set">藥包機</span>' : '<span class="tag ' + (place ? 'tag-place-set' : 'tag-place-unset') + '">藥櫃區:' + (place || '尚未設定') + '</span>') +
         (discontinued ? '<span class="tag tag-status">' + shortStatus(d) + '</span>' : '') +
       '</div>';
     row.addEventListener('click', function(){ openDetail(code); });
@@ -1568,6 +1572,7 @@ function renderDetail() {
       '<label>藥櫃區</label>' +
       (editing
         ? '<input id="f_place" value="' + esc(place) + '">'
+        : isPackerItem(item) ? '<div class="value">藥包機</div>'
         : '<div class="value">' + (place ? '藥櫃區:' + place + (isManual ? '' : '<span style="font-size:12px;font-weight:400;color:#999;">（帶入次料位號，尚未確認）</span>') : '尚未設定') + '</div>'
       ) +
     '</div>' +
