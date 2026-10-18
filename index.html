@@ -108,8 +108,8 @@
   #scanRateBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
   #scanCamBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
   #scanCamBtn.on { background: #185FA5; color: #fff; }
-  #camBox { position: relative; background: #000; border-radius: 14px; overflow: hidden; height: 30vh; min-height: 150px; display: none; }
-  #camBox video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #camBox { position: relative; background: #000; border-radius: 14px; overflow: hidden; height: 46vh; min-height: 220px; display: none; }
+  #camBox video { width: 100%; height: 100%; object-fit: contain; display: block; } /* contain = 不裁切,看到的就是掃得到的範圍 */
   #camFlash { position: absolute; inset: 0; background: rgba(40,200,90,.5); opacity: 0; transition: opacity .25s; pointer-events: none; }
   #camZoom { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.55); color: #fff; border: 0; border-radius: 12px; font-size: 13px; padding: 5px 12px; display: none; }
   #camMsg { font-size: 12.5px; color: #B3261E; text-align: center; }
@@ -119,8 +119,8 @@
   #scanRateBtn, #scanLetterBtn { flex: 1; height: 36px; background: #fff; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 10px; font-size: 13px; padding: 0 10px; }
   #scanTwiceBtn { flex-shrink: 0; height: 36px; background: #fff; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 10px; font-size: 13px; padding: 0 12px; }
   #scanResult { background: #fff; border-radius: 16px; border: 0.5px solid #B5D4F4; padding: 18px; display: none; flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
-  #scanResult .loc { font-size: 38px; font-weight: 800; color: #0C447C; letter-spacing: 1px; overflow-wrap: anywhere; }
-  #scanResult .nm { font-size: 22px; font-weight: 700; color: #2E4E6B; overflow-wrap: anywhere; }
+  #scanResult .loc { font-size: 46px; font-weight: 800; color: #0C447C; letter-spacing: 1px; overflow-wrap: anywhere; }
+  #scanResult .nm { font-size: 26px; font-weight: 700; color: #2E4E6B; overflow-wrap: anywhere; }
   #scanResult .hint { font-size: 14px; color: #7699B8; }
   #scanResult .warn { font-size: 16px; font-weight: 700; color: #B3261E; }
   #scanResult.bad .loc, #scanResult.bad .nm { color: #B3261E; }
@@ -347,7 +347,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-18d'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-18e'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -1066,7 +1066,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
   const camFlash = document.getElementById('camFlash'), camMsg = document.getElementById('camMsg'), camZoom = document.getElementById('camZoom');
   const ZOOMS = [1, 1.5, 2, 3];
   let camStream = null, camTrack = null, camDet = null, camOn = false, camTimer = null, camLast = '', camSeen = 0, camLastRead = 0, camZoomCap = null;
-  let zoomIdx = Math.min(ZOOMS.length - 1, Math.max(0, parseInt(lsGet('scan_zoom', '0'), 10) || 0));
+  let zoomIdx = Math.min(ZOOMS.length - 1, Math.max(0, parseInt(lsGet('scan_zoom2', '0'), 10) || 0));
   const CAM_IDLE_MS = 90000; // 90 秒沒掃到東西就讓鏡頭休息省電
   function camPaint() {
     camBtn.classList.toggle('on', camOn);
@@ -1105,7 +1105,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
       const f = await BarcodeDetector.getSupportedFormats();
       if (f.indexOf('qr_code') < 0) { camMsg.textContent = '這支手機的瀏覽器讀不了 QR'; return; }
       camDet = new BarcodeDetector({ formats: ['qr_code'] });
-      camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+      camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
     } catch (e) {
       camMsg.textContent = (e && e.name === 'NotAllowedError') ? '沒有相機權限:網址列左邊的鎖頭 → 權限 → 相機 → 允許' : '開不了鏡頭';
       return;
@@ -1151,7 +1151,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     if (!listening) startBtn.click(); // 先照一般流程「開始掃碼」(要有一次點擊,手機才讓程式出聲),它會順便開鏡頭
     else startCam();
   });
-  camZoom.addEventListener('click', function() { zoomIdx = (zoomIdx + 1) % ZOOMS.length; lsSet('scan_zoom', String(zoomIdx)); applyZoom(); });
+  camZoom.addEventListener('click', function() { zoomIdx = (zoomIdx + 1) % ZOOMS.length; lsSet('scan_zoom2', String(zoomIdx)); applyZoom(); });
   startBtn.addEventListener('click', function() { if (lsGet('scan_cam', '0') === '1') startCam(); });
   camPaint();
 
