@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>鏡頭掃碼測試</title>
+<style>
+  :root { --bg:#EFF6FC; --card:#fff; --fg:#17324D; --muted:#5F7A94; --line:#B5D4F4; --accent:#185FA5; --on:#fff; --ok:#1B7A3E; --bad:#B3261E; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  main { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  h1 { font-size: 20px; margin: 0; }
+  p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font-size: 15px; padding: 9px 14px; border-radius: 14px; border: .5px solid var(--line); background: var(--card); color: var(--accent); }
+  button.main { background: var(--accent); color: var(--on); border-color: var(--accent); width: 100%; height: 52px; font-size: 17px; font-weight: 600; }
+  #box { position: relative; background: #000; border-radius: 16px; overflow: hidden; aspect-ratio: 4/3; }
+  video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #aim { position: absolute; inset: 22% 22%; border: 2px solid rgba(255,255,255,.85); border-radius: 12px; pointer-events: none; }
+  #flash { position: absolute; inset: 0; background: rgba(40,200,90,.45); opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .card { background: var(--card); border: .5px solid var(--line); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .big { font-size: 26px; font-weight: 800; overflow-wrap: anywhere; }
+  .small { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .log { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; border-top: .5px solid var(--line); padding-top: 5px; }
+  .log:first-child { border-top: 0; padding-top: 0; }
+  #err { color: var(--bad); font-size: 14px; }
+  input[type=range] { width: 100%; }
+</style>
+</head>
+<body>
+<main>
+  <h1>鏡頭掃碼測試</h1>
+  <p>按「開啟鏡頭」,把藥袋上的 QR 放進白框裡。讀到就會嗶一聲、畫面閃綠。多試幾種藥袋(小的、反光的、皺的),看讀得到嗎、要多近、多快。</p>
+
+  <button class="main" id="go">開啟鏡頭</button>
+  <div id="box" hidden><video id="v" playsinline muted></video><div id="aim"></div><div id="flash"></div></div>
+  <p id="err" hidden></p>
+
+  <div class="row" id="tools" hidden>
+    <button id="torch" hidden>補光燈:關</button>
+    <button id="stop">關閉鏡頭</button>
+  </div>
+  <div class="card" id="zoomCard" hidden>
+    <div class="small">放大(靠不近的小 QR 可以拉大一點):<span id="zv">1</span>×</div>
+    <input type="range" id="zoom" min="1" max="4" step="0.1" value="1">
+  </div>
+
+  <div class="card">
+    <div class="small" id="engine">辨識方式:尚未開始</div>
+    <div class="small" id="info"></div>
+  </div>
+
+  <div class="card" id="last" hidden>
+    <div class="small">最近一次讀到</div>
+    <div class="big" id="code"></div>
+    <div class="small" id="raw"></div>
+  </div>
+
+  <div class="card">
+    <div class="small" id="sum">還沒有紀錄</div>
+    <div id="log"></div>
+    <div class="row"><button id="reset">清除紀錄</button></div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var stream = null, track = null, detector = null, engine = '', running = false, timer = null;
+  var logs = [], lastText = '', lastAt = 0, tStart = 0, frames = 0, fpsT = 0, fps = 0, torchOn = false;
+  var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  function showErr(m) { $('err').textContent = m; $('err').hidden = !m; }
+  function beep() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext, a = new AC(), o = a.createOscillator(), g = a.createGain();
+      o.frequency.value = 1200; g.gain.value = 0.15; o.connect(g); g.connect(a.destination); o.start(); setTimeout(function () { o.stop(); a.close(); }, 120);
+    } catch (e) {}
+  }
+  function parseCode(t) {
+    var m = String(t || '').match(/Mdrug\/([A-Za-z0-9]+)/i);
+    return m ? m[1] : null;
+  }
+  function paintLog() {
+    var box = $('log'); box.innerHTML = '';
+    logs.slice().reverse().forEach(function (l) {
+      var d = document.createElement('div'); d.className = 'log';
+      d.innerHTML = '<span></span><span class="small"></span>';
+      d.children[0].textContent = l.code || '(不是藥品 QR)';
+      d.children[1].textContent = '距上次 ' + l.gap + ' 秒';
+      box.appendChild(d);
+    });
+    $('sum').textContent = logs.length ? ('共讀到 ' + logs.length + ' 次') : '還沒有紀錄';
+  }
+  function onRead(text) {
+    var now = performance.now();
+    if (text === lastText && now - lastAt < 2500) { lastAt = now; return; } // 同一張 QR 還在畫面裡,不重複算
+    var gap = lastAt ? ((now - lastAt) / 1000).toFixed(1) : '-';
+    lastText = text; lastAt = now;
+    var code = parseCode(text);
+    logs.push({ code: code, gap: gap });
+    $('last').hidden = false; $('code').textContent = code || '(不是藥品 QR)'; $('raw').textContent = text;
+    $('flash').style.opacity = 1; setTimeout(function () { $('flash').style.opacity = 0; }, 250);
+    beep(); if (navigator.vibrate) navigator.vibrate(60);
+    paintLog();
+  }
+
+  async function detectFrame(v) {
+    if (detector) {
+      var r = await detector.detect(v);
+      return r.length ? r[0].rawValue : null;
+    }
+    var w = v.videoWidth, h = v.videoHeight; if (!w) return null;
+    var s = Math.min(1, 640 / w); canvas.width = Math.round(w * s); canvas.height = Math.round(h * s);
+    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+    var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var q = window.jsQR ? window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' }) : null;
+    return q ? q.data : null;
+  }
+  async function loop() {
+    if (!running) return;
+    var v = $('v');
+    try {
+      if (v.readyState >= 2) {
+        var t = await detectFrame(v);
+        if (t) onRead(t);
+        frames++; var n = performance.now();
+        if (n - fpsT > 1000) { fps = frames; frames = 0; fpsT = n; $('info').textContent = '畫面 ' + v.videoWidth + '×' + v.videoHeight + ' ・ 每秒辨識約 ' + fps + ' 次'; }
+      }
+    } catch (e) {}
+    timer = setTimeout(loop, detector ? 80 : 120);
+  }
+
+  async function start() {
+    showErr('');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showErr('這個瀏覽器不能開鏡頭。請用 Chrome 開,而且網址要是 https。'); return; }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    } catch (e) {
+      showErr(e && e.name === 'NotAllowedError' ? '沒有相機權限。請在網址列左邊的鎖頭 → 權限 → 相機,改成允許。' : ('開不了鏡頭:' + (e && e.message || e)));
+      return;
+    }
+    track = stream.getVideoTracks()[0];
+    var v = $('v'); v.srcObject = stream; await v.play().catch(function () {});
+    $('box').hidden = false; $('tools').hidden = false; $('go').hidden = true;
+
+    // 連續對焦、補光燈、放大(手機支援才會出現)
+    var cap = (track.getCapabilities && track.getCapabilities()) || {};
+    try { if (cap.focusMode && cap.focusMode.indexOf('continuous') >= 0) await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) {}
+    $('torch').hidden = !cap.torch;
+    if (cap.zoom) { $('zoomCard').hidden = false; $('zoom').min = cap.zoom.min; $('zoom').max = Math.min(cap.zoom.max, 5); $('zoom').step = cap.zoom.step || 0.1; $('zoom').value = cap.zoom.min; $('zv').textContent = cap.zoom.min; }
+
+    // 辨識方式:Chrome 內建的優先,沒有就用 jsQR
+    detector = null; engine = 'jsQR(程式庫)';
+    try {
+      if ('BarcodeDetector' in window) {
+        var f = await BarcodeDetector.getSupportedFormats();
+        if (f.indexOf('qr_code') >= 0) { detector = new BarcodeDetector({ formats: ['qr_code'] }); engine = 'Chrome 內建 BarcodeDetector'; }
+      }
+    } catch (e) {}
+    if (!detector && !window.jsQR) { showErr('找不到可用的辨識方式(內建的沒有,程式庫也沒載入到)。請確認有連網後重新整理。'); return; }
+    $('engine').textContent = '辨識方式:' + engine + (cap.torch ? ' ・ 有補光燈' : '') + (cap.zoom ? ' ・ 可放大' : '');
+    running = true; tStart = performance.now(); fpsT = tStart; frames = 0; loop();
+  }
+  function stop() {
+    running = false; clearTimeout(timer);
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    stream = null; track = null; torchOn = false; $('torch').textContent = '補光燈:關';
+    $('box').hidden = true; $('tools').hidden = true; $('zoomCard').hidden = true; $('go').hidden = false;
+  }
+
+  $('go').addEventListener('click', start);
+  $('stop').addEventListener('click', stop);
+  $('torch').addEventListener('click', async function () {
+    if (!track) return; torchOn = !torchOn;
+    try { await track.applyConstraints({ advanced: [{ torch: torchOn }] }); $('torch').textContent = '補光燈:' + (torchOn ? '開' : '關'); } catch (e) { torchOn = !torchOn; showErr('補光燈開不起來'); }
+  });
+  $('zoom').addEventListener('input', async function () {
+    if (!track) return; var z = parseFloat(this.value); $('zv').textContent = z.toFixed(1);
+    try { await track.applyConstraints({ advanced: [{ zoom: z }] }); } catch (e) {}
+  });
+  $('reset').addEventListener('click', function () { logs = []; lastText = ''; lastAt = 0; $('last').hidden = true; paintLog(); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden && stream) stop(); });
+  paintLog();
+})();
+</script>
+</body>
+</html>
