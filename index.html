@@ -106,6 +106,13 @@
   .scan-btns { display: flex; gap: 6px; flex-shrink: 0; }
   .scan-btns button { white-space: nowrap; }
   #scanRateBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
+  #scanCamBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
+  #scanCamBtn.on { background: #185FA5; color: #fff; }
+  #camBox { position: relative; background: #000; border-radius: 14px; overflow: hidden; height: 30vh; min-height: 150px; display: none; }
+  #camBox video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #camFlash { position: absolute; inset: 0; background: rgba(40,200,90,.5); opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #camZoom { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.55); color: #fff; border: 0; border-radius: 12px; font-size: 13px; padding: 5px 12px; display: none; }
+  #camMsg { font-size: 12.5px; color: #B3261E; text-align: center; }
   #scanManualBtn { background: none; border: 0.5px solid #B5D4F4; color: #185FA5; border-radius: 14px; font-size: 12px; padding: 5px 12px; }
   .scan-tools2 { display: flex; gap: 8px; align-items: center; margin-top: -4px; }
   #scanVoiceSel { flex: 1; min-width: 0; height: 36px; border-radius: 10px; border: 0.5px solid #B5D4F4; background: #fff; color: #2E4E6B; font-size: 13px; padding: 0 8px; }
@@ -304,7 +311,9 @@
     <button id="scanStartBtn">開始掃碼</button>
     <div id="scanHint">掃描藥袋上的 QR Code</div>
     <input id="scanInput" type="password" lang="en" inputmode="none" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="掃描器會輸入到這裡">
-    <div class="scan-tools"><span id="scanLockMsg"></span><span class="scan-btns"><button id="scanRateBtn">語速:慢</button><button id="scanManualBtn">手動輸入測試</button></span></div>
+    <div class="scan-tools"><span id="scanLockMsg"></span><span class="scan-btns"><button id="scanRateBtn">語速:慢</button><button id="scanCamBtn">鏡頭</button><button id="scanManualBtn">手動輸入測試</button></span></div>
+    <div id="camBox"><video id="camV" playsinline muted></video><div id="camFlash"></div><button id="camZoom">放大 1×</button></div>
+    <div id="camMsg"></div>
     <div id="scanResult"></div>
     <div class="scan-hist-title">這次掃過的(點一下可再聽一次)</div>
     <div id="scanHistory"></div>
@@ -338,7 +347,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-18a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-18c'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -781,7 +790,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     return t.trim() || orig;
   }
   // 字母唸法:大多數字母照原本唸;唸起來會混的字母改用中文字(之後有字母唸錯,把它加進這張表就好)。資料裡有「/」時只唸第一個
-  const LETTER_SAY = { X: '叉', Z: '力', L: '欸摟', B: '逼' };
+  const LETTER_SAY = { X: '叉', Z: '力', L: '欸摟', B: '嗶' };
   function spellLoc(loc) {
     const first = String(loc || '').split('/').map(function(x){ return x.trim(); }).filter(Boolean)[0] || '';
     // 一個字一個字處理:英文字母數字照規則換音,中文字(例如「共」)和符號原樣保留,避免整串被當成英文唸
@@ -1052,9 +1061,93 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     scanInput.focus();
   });
 
+  // ==================== 鏡頭掃碼(選用):用手機後鏡頭讀 QR,讀到後走跟掃碼機一樣的流程 ====================
+  const camBtn = document.getElementById('scanCamBtn'), camBox = document.getElementById('camBox'), camV = document.getElementById('camV');
+  const camFlash = document.getElementById('camFlash'), camMsg = document.getElementById('camMsg'), camZoom = document.getElementById('camZoom');
+  const ZOOMS = [1, 1.5, 2, 3];
+  let camStream = null, camTrack = null, camDet = null, camOn = false, camTimer = null, camLast = '', camSeen = 0, camLastRead = 0, camZoomCap = null;
+  let zoomIdx = Math.min(ZOOMS.length - 1, Math.max(0, parseInt(lsGet('scan_zoom', '0'), 10) || 0));
+  const CAM_IDLE_MS = 90000; // 90 秒沒掃到東西就讓鏡頭休息省電
+  function camPaint() {
+    camBtn.classList.toggle('on', camOn);
+    camBtn.textContent = camOn ? '鏡頭:開' : '鏡頭';
+    camBox.style.display = camOn ? 'block' : 'none';
+  }
+  function stopCam(msg) {
+    camOn = false; clearTimeout(camTimer);
+    if (camStream) camStream.getTracks().forEach(function(t){ t.stop(); });
+    camStream = null; camTrack = null; camV.srcObject = null; camZoomCap = null; camZoom.style.display = 'none';
+    camMsg.textContent = msg || '';
+    camPaint();
+  }
+  async function applyZoom() {
+    if (!camTrack || !camZoomCap) return;
+    const z = Math.min(camZoomCap.max, Math.max(camZoomCap.min, ZOOMS[zoomIdx]));
+    try { await camTrack.applyConstraints({ advanced: [{ zoom: z }] }); } catch (e) {}
+    camZoom.textContent = '放大 ' + ZOOMS[zoomIdx] + '×';
+  }
+  async function startCam() {
+    if (camOn) return;
+    camMsg.textContent = '';
+    if (!('BarcodeDetector' in window)) { camMsg.textContent = '這個瀏覽器不支援鏡頭掃碼,請用 Chrome(Android)'; return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { camMsg.textContent = '這個瀏覽器不能開鏡頭'; return; }
+    try {
+      const f = await BarcodeDetector.getSupportedFormats();
+      if (f.indexOf('qr_code') < 0) { camMsg.textContent = '這支手機的瀏覽器讀不了 QR'; return; }
+      camDet = new BarcodeDetector({ formats: ['qr_code'] });
+      camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    } catch (e) {
+      camMsg.textContent = (e && e.name === 'NotAllowedError') ? '沒有相機權限:網址列左邊的鎖頭 → 權限 → 相機 → 允許' : '開不了鏡頭';
+      return;
+    }
+    camTrack = camStream.getVideoTracks()[0];
+    camV.srcObject = camStream;
+    try { await camV.play(); } catch (e) {}
+    const cap = (camTrack.getCapabilities && camTrack.getCapabilities()) || {};
+    try { if (cap.focusMode && cap.focusMode.indexOf('continuous') >= 0) await camTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) {}
+    camZoomCap = cap.zoom || null;
+    camZoom.style.display = camZoomCap ? 'block' : 'none';
+    applyZoom();
+    camOn = true; camLast = ''; camSeen = 0; camLastRead = performance.now();
+    camPaint();
+    camLoop();
+  }
+  async function camLoop() {
+    if (!camOn) return;
+    if (!scanScreen.classList.contains('active') || document.visibilityState !== 'visible') { stopCam(''); return; } // 離開掃碼頁或切到別的程式就關鏡頭
+    const now = performance.now();
+    if (now - camLastRead > CAM_IDLE_MS) { stopCam('鏡頭已休息(省電),點「鏡頭」再開'); return; }
+    try {
+      if (camV.readyState >= 2) {
+        const r = await camDet.detect(camV);
+        if (r.length) {
+          const text = r[0].rawValue, t = performance.now();
+          camLastRead = t;
+          if (text === camLast && t - camSeen < 1000) { camSeen = t; } // 同一張 QR 還在畫面裡,不重複唸
+          else {
+            camLast = text; camSeen = t;
+            camFlash.style.opacity = 1; setTimeout(function(){ camFlash.style.opacity = 0; }, 250);
+            if (navigator.vibrate) navigator.vibrate(50);
+            handleScan(text);
+          }
+        }
+      }
+    } catch (e) {}
+    camTimer = setTimeout(camLoop, 90);
+  }
+  camBtn.addEventListener('click', function() {
+    if (camOn) { lsSet('scan_cam', '0'); stopCam(''); return; }
+    lsSet('scan_cam', '1');
+    if (!listening) startBtn.click(); // 先照一般流程「開始掃碼」(要有一次點擊,手機才讓程式出聲),它會順便開鏡頭
+    else startCam();
+  });
+  camZoom.addEventListener('click', function() { zoomIdx = (zoomIdx + 1) % ZOOMS.length; lsSet('scan_zoom', String(zoomIdx)); applyZoom(); });
+  startBtn.addEventListener('click', function() { if (lsGet('scan_cam', '0') === '1') startCam(); });
+  camPaint();
+
   document.getElementById('scanBtn').addEventListener('click', function() {
     closeDrawer();
-    listening = false;
+    listening = false; stopCam('');
     manual = false; scanInput.setAttribute('inputmode', 'none'); scanInput.setAttribute('type', 'password'); manualBtn.textContent = '手動輸入測試'; scanInput.placeholder = '掃描器會輸入到這裡';
     startBtn.classList.remove('on');
     startBtn.textContent = '開始掃碼';
@@ -1063,7 +1156,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     window.scrollTo({ top: 0 });
   });
   document.getElementById('scanBackBtn').addEventListener('click', function() {
-    listening = false;
+    listening = false; stopCam('');
     unlockScreen();
     if (window.speechSynthesis) speechSynthesis.cancel();
     scanInput.blur();
