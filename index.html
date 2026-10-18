@@ -347,7 +347,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-18c'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-18d'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -1086,8 +1086,18 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
     try { await camTrack.applyConstraints({ advanced: [{ zoom: z }] }); } catch (e) {}
     camZoom.textContent = '放大 ' + ZOOMS[zoomIdx] + '×';
   }
+  let camAC = null;
+  function camBeep() { // 讀到時「嗶」一聲(音效要在手指點擊當下先準備好,所以在 startCam 開頭建立)
+    try {
+      if (!camAC) return; if (camAC.state === 'suspended') camAC.resume();
+      const o = camAC.createOscillator(), g = camAC.createGain();
+      o.frequency.value = 1200; g.gain.value = 0.3; o.connect(g); g.connect(camAC.destination);
+      o.start(); o.stop(camAC.currentTime + 0.12);
+    } catch (e) {}
+  }
   async function startCam() {
     if (camOn) return;
+    try { const AC = window.AudioContext || window.webkitAudioContext; if (!camAC && AC) camAC = new AC(); if (camAC && camAC.state === 'suspended') camAC.resume(); } catch (e) {}
     camMsg.textContent = '';
     if (!('BarcodeDetector' in window)) { camMsg.textContent = '這個瀏覽器不支援鏡頭掃碼,請用 Chrome(Android)'; return; }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { camMsg.textContent = '這個瀏覽器不能開鏡頭'; return; }
@@ -1127,7 +1137,7 @@ document.getElementById('edgeHandle').addEventListener('click', openDrawer);
           else {
             camLast = text; camSeen = t;
             camFlash.style.opacity = 1; setTimeout(function(){ camFlash.style.opacity = 0; }, 250);
-            if (navigator.vibrate) navigator.vibrate(50);
+            camBeep();
             handleScan(text);
           }
         }
