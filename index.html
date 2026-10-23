@@ -326,7 +326,7 @@
   <div class="divider" style="margin:8px 18px;"></div>
   <button class="cat-row" id="drawerRefreshBtn">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-    <span class="label" id="drawerRefreshLabel">更新</span>
+    <span class="label" id="drawerRefreshLabel">更新</span><span id="buildTxt" style="font-size:11px;color:#999;margin-left:6px;"></span>
     <span class="row-badge" id="rowBadge"></span>
   </button>
   <button class="cat-row" id="scanBtn">
@@ -347,7 +347,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-19a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-10-23a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -470,6 +470,8 @@ function getUpdateCount() {
 }
 function renderUpdateBadge() {
   const n = getUpdateCount();
+  const bt = document.getElementById('buildTxt');
+  if (bt) bt.textContent = APP_BUILD + (pendingBuild ? ' → 新版 ' + pendingBuild : '');
   [document.getElementById('edgeBadge'), document.getElementById('rowBadge')].forEach(function(el){
     if (!el) return;
     if (n > 0) { el.style.display = 'flex'; el.textContent = String(n); }
@@ -593,7 +595,7 @@ async function checkAppUpdate(apply) {
     document.getElementById('statusText').textContent = '發現新版本,更新中…';
     if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(function(k){ return caches.delete(k); })); }
     if (navigator.serviceWorker) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
-    location.reload();
+    location.replace(location.pathname + '?cb=' + Date.now()); // 換一個新網址重新載入,確保不會又讀到手機裡存的舊檔
     return true;
   } catch (e) { return false; } // 沒網路或查不到,就當作沒有新版,照原本流程只更新資料
 }
