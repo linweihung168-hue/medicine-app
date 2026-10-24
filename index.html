@@ -12,14 +12,14 @@
 <link rel="icon" href="acorn-icon-192.png">
 <title>藥庫</title>
 <style>
-  :root { --bg:#F2F2F7; --card:#fff; --label:#000; --sec:#3C3C4399; --sep:#3C3C4329; --blue:#007AFF; --red:#FF3B30; --green:#34C759; --fill:#7676801F; }
+  :root { --bg:#F2F2F7; --card:#fff; --label:#000; --sec:#3C3C4399; --sep:#3C3C4329; --blue:#2F7A57; --accent:#2F7A57; --accent-soft:#2F7A5718; --gray-btn:#E5E5EA; --red:#FF3B30; --green:#34C759; --fill:#7676801F; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { overflow-x: clip; width: 100%; overscroll-behavior-y: contain; }
   body { margin: 0; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang TC','Noto Sans CJK TC','Microsoft JhengHei',sans-serif; background: var(--bg); color: var(--label); overflow-x: clip; width: 100%; -webkit-font-smoothing: antialiased; }
   .screen { min-height: 100vh; min-height: 100dvh; display: none; flex-direction: column; padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
   .screen.active { display: flex; }
   body.no-tabs .screen { padding-bottom: env(safe-area-inset-bottom); }
-  button { font-family: inherit; cursor: pointer; }
+  button { font-family: inherit; cursor: pointer; color: inherit; }
   input { font-family: inherit; }
   mark { background:#FFE98A; color:inherit; padding:0 1px; border-radius:3px; }
 
@@ -49,14 +49,14 @@
   .tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .tag { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 7px; flex-shrink: 0; }
   .tag-code { background: var(--fill); color: var(--sec); font-weight: 600; }
-  .tag-loc { background: #007AFF1A; color: var(--blue); font-size: 15px; font-weight: 700; }
+  .tag-loc { background: var(--fill); color: var(--label); font-size: 15px; font-weight: 700; }
   .tag-place-set { background: #34C75922; color: #1E8E3E; }
   .tag-place-unset { background: #FF3B3019; color: var(--red); }
   .tag-status { background: var(--fill); color: var(--sec); }
   .item-row.muted .name { color: var(--sec); }
   .item-row.muted .tag-loc { background: var(--fill); color: var(--sec); }
   .empty-msg { text-align: center; color: var(--sec); font-size: 15px; padding: 40px 20px; line-height: 1.6; }
-  .voice-msg { font-size: 13px; color: var(--blue); padding: 10px 16px 2px; }
+  .voice-msg { font-size: 13px; color: var(--sec); padding: 10px 16px 2px; }
   .voice-warn { color: var(--red); font-weight: 700; font-size: 14px; padding-top: 0; }
 
   #emptyState { display: flex; flex-direction: column; padding: 0 16px; }
@@ -66,7 +66,7 @@
   .chip b { font-size: 20px; font-weight: 600; }
   .chip span { font-size: 15px; color: var(--sec); }
   .sec-h { margin: 26px 4px 8px; font-size: 13px; color: var(--sec); display: flex; justify-content: space-between; align-items: center; }
-  .sec-h button { background: none; border: none; padding: 4px; display: flex; color: var(--blue); font-size: 14px; }
+  .sec-h button { background: none; border: none; padding: 4px; display: flex; color: var(--sec); font-size: 14px; }
   .group { background: #fff; border-radius: 14px; overflow: hidden; }
   .recent-item { display: flex; align-items: center; gap: 10px; padding: 0 16px; min-height: 48px; position: relative; }
   .recent-item + .recent-item::before { content:''; position:absolute; top:0; left:16px; right:0; height:.5px; background: var(--sep); }
@@ -75,7 +75,7 @@
   .recent-empty { font-size: 14px; color: var(--sec); text-align: center; padding: 16px 0; }
   .mode-row { display: flex; justify-content: flex-end; padding: 0 16px 10px; margin-top: -6px; }
   .mode-row.on-results { display: none !important; }
-  .mode-pill { border: none; background: var(--fill); color: var(--blue); border-radius: 14px; font-size: 13px; font-weight: 600; padding: 6px 14px; }
+  .mode-pill { border: none; background: var(--accent-soft); color: var(--accent); border-radius: 14px; font-size: 13px; font-weight: 600; padding: 6px 14px; }
   .mode-pill.ud { background: var(--blue); color: #fff; }
   .mic-btn { width: 38px; height: 38px; border-radius: 19px; border: none; background: transparent; display: none; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; margin-right: -8px; }
   .mic-btn.on { background: #FF3B3019; animation: micpulse 1.1s ease-in-out infinite; }
@@ -86,7 +86,7 @@
   #tabbar { position: fixed; left: 20px; right: 20px; bottom: calc(14px + env(safe-area-inset-bottom)); height: 64px; border-radius: 32px; background: rgba(255,255,255,.88); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); box-shadow: 0 8px 28px rgba(0,0,0,.14), 0 0 0 .5px rgba(0,0,0,.06); display: flex; align-items: center; justify-content: space-around; padding: 0 6px; z-index: 10; }
   body.no-tabs #tabbar { display: none; }
   .tab { position: relative; flex: 1; height: 52px; border: none; background: transparent; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 500; color: #6b6b70; padding: 0; }
-  .tab.on { background: rgba(0,0,0,.06); color: var(--blue); }
+  .tab.on { background: var(--accent-soft); color: var(--accent); }
   .tab-badge { display: none; position: absolute; top: 4px; left: calc(50% + 6px); min-width: 16px; height: 16px; border-radius: 8px; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; align-items: center; justify-content: center; padding: 0 4px; line-height: 1; }
 
   /* 更多 */
@@ -107,7 +107,7 @@
   #camToggle.on { background: #fff; color: var(--red); }
   #scanHint { text-align: center; font-size: 15px; color: var(--sec); line-height: 1.5; }
   .scan-tools { display: flex; justify-content: center; }
-  #scanRateBtn { background: var(--fill); border: none; color: var(--blue); border-radius: 14px; font-size: 14px; font-weight: 600; padding: 7px 18px; }
+  #scanRateBtn { background: var(--fill); border: none; color: var(--label); border-radius: 14px; font-size: 14px; font-weight: 600; padding: 7px 18px; }
   #camBox { position: relative; background: #000; border-radius: 16px; overflow: hidden; height: 46vh; min-height: 220px; display: none; }
   #camBox video { width: 100%; height: 100%; object-fit: contain; display: block; }
   #camFlash { position: absolute; inset: 0; background: rgba(52,199,89,.5); opacity: 0; transition: opacity .25s; pointer-events: none; }
@@ -115,7 +115,7 @@
   #camMsg { font-size: 14px; color: var(--red); text-align: center; }
   #camMsg:empty { display: none; }
   #scanResult { background: #fff; border-radius: 16px; padding: 20px 18px; display: none; flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
-  #scanResult .loc { font-size: 46px; font-weight: 800; color: var(--blue); letter-spacing: 1px; overflow-wrap: anywhere; }
+  #scanResult .loc { font-size: 46px; font-weight: 800; color: var(--label); letter-spacing: 1px; overflow-wrap: anywhere; }
   #scanResult .nm { font-size: 26px; font-weight: 700; overflow-wrap: anywhere; }
   #scanResult .hint { font-size: 15px; color: var(--sec); }
   #scanResult .warn { font-size: 17px; font-weight: 700; color: var(--red); }
@@ -124,13 +124,13 @@
   .scan-hist-title { display: none; font-size: 13px; color: var(--sec); margin: 6px 4px 0; }
   .scan-hist-item { display: flex; gap: 8px; align-items: baseline; background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 6px; font-size: 15px; }
   .scan-hist-item .t { color: var(--sec); font-size: 13px; flex-shrink: 0; }
-  .scan-hist-item .l { font-weight: 700; color: var(--blue); flex-shrink: 0; }
+  .scan-hist-item .l { font-weight: 700; color: var(--label); flex-shrink: 0; }
   .scan-hist-item.bad .l { color: var(--red); }
 
   /* 詳細頁 */
   #detailScreen { background: var(--bg); }
   .detail-top { display: flex; align-items: center; padding: calc(10px + env(safe-area-inset-top)) 8px 0; }
-  .detail-top .back-btn { display: flex; width: auto; padding: 0 8px; margin: 0; color: var(--blue); font-size: 17px; gap: 2px; }
+  .detail-top .back-btn { display: flex; width: auto; padding: 0 8px; margin: 0; color: var(--accent); font-size: 17px; gap: 2px; }
   #saveToast { position: fixed; top: 14px; left: 50%; transform: translateX(-50%) translateY(-40px); background: rgba(40,40,44,.92); color: #fff; font-size: 14px; padding: 9px 20px; border-radius: 20px; opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; white-space: nowrap; z-index: 25; }
   #saveToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .detail-body { padding: 8px 16px 24px; flex: 1; }
@@ -148,7 +148,7 @@
   .field:has(+ .divider), .field:last-of-type { border-radius: 0 0 14px 14px; }
   .btn-save { width: 100%; height: 52px; border-radius: 14px; background: var(--blue); color: #fff; border: none; font-size: 17px; font-weight: 600; margin-top: 20px; }
 
-  #pullIndicator { display: flex; align-items: center; justify-content: center; height: 0; overflow: hidden; color: var(--blue); font-size: 13px; transition: height .15s ease; }
+  #pullIndicator { display: flex; align-items: center; justify-content: center; height: 0; overflow: hidden; color: var(--sec); font-size: 13px; transition: height .15s ease; }
   #pullIndicator .spinner { width: 16px; height: 16px; border: 2px solid #C7C7CC; border-top-color: var(--blue); border-radius: 50%; margin-right: 8px; animation: spin .7s linear infinite; display: none; }
   #pullIndicator.loading .spinner { display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -158,7 +158,7 @@
   .modal-box, .version-box, .about-box { background: rgba(250,250,252,.98); border-radius: 18px; padding: 22px 20px; width: 100%; max-width: 320px; }
   .modal-box { text-align: center; }
   .modal-box p { margin: 0 0 18px; font-size: 16px; line-height: 1.5; }
-  .modal-box button, .version-box .v-close, .about-box .a-close { display: block; width: 100%; height: 44px; border-radius: 12px; background: var(--blue); color: #fff; border: none; font-size: 17px; font-weight: 600; }
+  .modal-box button, .version-box .v-close, .about-box .a-close { display: block; width: 100%; height: 44px; border-radius: 12px; background: var(--gray-btn); color: var(--label); border: none; font-size: 17px; font-weight: 600; }
   .version-box, .about-box { max-height: 80vh; overflow-y: auto; text-align: left; }
   .v-title, .a-title { font-size: 20px; font-weight: 700; margin: 0 0 14px; }
   #versionList { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
@@ -171,7 +171,7 @@
   .v-item.open .v-body { display: flex; }
   .v-line { display: flex; font-size: 14px; color: #3C3C43; line-height: 1.5; }
   .v-line .txt { flex: 1; }
-  .about-box .sync-badge { display: inline-block; background: var(--fill); color: var(--blue); font-size: 14px; padding: 6px 12px; border-radius: 10px; margin-bottom: 16px; }
+  .about-box .sync-badge { display: inline-block; background: var(--fill); color: var(--sec); font-size: 14px; padding: 6px 12px; border-radius: 10px; margin-bottom: 16px; }
   .about-box h4 { font-size: 13px; color: var(--sec); margin: 0 0 4px; font-weight: 500; }
   .about-box p { font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
   .about-box a.contact-link { display: flex; align-items: center; gap: 12px; background: #2BC96C; border-radius: 14px; height: 54px; padding: 0 14px; font-size: 16px; font-weight: 600; color: #fff; text-decoration: none; margin-bottom: 14px; }
@@ -209,13 +209,13 @@
   <h1 class="large" id="bigTitle">藥庫</h1>
   <div class="topbar" id="topbar">
     <button class="back-btn" id="homeBtn" aria-label="回首頁">
-      <svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#007AFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 2 2 10 10 18"/></svg>
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#2F7A57" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 2 2 10 10 18"/></svg>
     </button>
     <div class="search-wrap">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input id="search" type="text" placeholder="搜尋藥名、藥品碼、料位號" autocomplete="off">
       <button class="mic-btn" id="micBtn" aria-label="語音查詢">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
       </button>
     </div>
   </div>
@@ -237,7 +237,7 @@
 <div id="detailScreen" class="screen">
   <div class="detail-top">
     <button class="back-btn" id="backBtn" aria-label="返回">
-      <svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#007AFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 2 2 10 10 18"/></svg><span>返回</span>
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#2F7A57" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 2 2 10 10 18"/></svg><span>返回</span>
     </button>
   </div>
   <div id="saveToast">已儲存</div>
