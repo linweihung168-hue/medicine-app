@@ -1,4 +1,4 @@
-const CACHE_NAME = 'find-medicine-v10';
+const CACHE_NAME = 'find-medicine-v11';
 const ASSETS = ['./', './index.html', './manifest.json', './acorn-icon-192.png', './acorn-icon-512.png', './line-icon.png', './acorn-transparent.png'];
 const OPTIONAL_ASSETS = ['./pinyin-pro.js']; // 讀音工具:就算還沒上傳,也不會讓整個安裝失敗
 const FETCH_TIMEOUT = 3000; // 網路太慢時,等這麼久就直接用快取,不要一直卡著
