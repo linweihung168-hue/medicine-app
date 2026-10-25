@@ -183,6 +183,12 @@
   .switch i { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 14px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .2s; }
   .switch.on { background: var(--accent); }
   .switch.on i { transform: translateX(20px); }
+
+  h1.large.logo { padding-bottom: 14px; line-height: 0; }
+  h1.large.logo img { width: 46px; height: 46px; border-radius: 11px; display: block; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+
+  h1.large.area { padding: calc(30px + env(safe-area-inset-top)) 20px 14px; line-height: 0; }
+  .areabar { display: inline-block; width: 48px; height: 6px; border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -211,7 +217,7 @@
 </div></div>
 
 <div id="homeScreen" class="screen active">
-  <h1 class="large" id="bigTitle">藥庫</h1>
+  <h1 class="large logo" id="bigTitle"><img src="round-192.png" alt="藥庫"></h1>
   <div class="topbar" id="topbar">
     <button class="back-btn" id="homeBtn" aria-label="回首頁">
       <svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#2F7A57" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 2 2 10 10 18"/></svg>
@@ -335,7 +341,13 @@ function updateHomeView() {
   document.getElementById('homeBtn').style.display = showResults ? 'flex' : 'none';
   document.getElementById('topbar').classList.toggle('in-results', hasQuery);
   const bt = document.getElementById('bigTitle');
-  bt.textContent = (activeFilter && !hasQuery) ? activeFilter : '藥庫';
+  const AREA_COLOR = { '調劑檯':'#2F7A57', '專調檯':'#2A8FA3', '兒科檯':'#E39A2D', '急診檯':'#D9534F', '覆核發藥檯':'#7A6FB0', '諮詢檯':'#8E8E93', '冰箱藥品':'#4C8FD6' };
+  if (activeFilter && !hasQuery) {
+    bt.classList.remove('logo'); bt.classList.add('area');
+    bt.innerHTML = '<span class="areabar" style="background:' + (AREA_COLOR[activeFilter] || '#2F7A57') + '"></span>';
+    bt.setAttribute('aria-label', activeFilter);
+  } else if (!bt.classList.contains('logo')) { bt.classList.remove('area'); bt.removeAttribute('aria-label'); bt.innerHTML = '<img src="round-192.png" alt="藥庫">'; bt.classList.add('logo'); }
+  document.getElementById('search').placeholder = activeFilter ? ('在' + activeFilter + '中搜尋') : '搜尋藥名、藥品碼、料位號';
   bt.classList.toggle('hidden', hasQuery);
   const mrow = document.getElementById('modeRow'); if (mrow) mrow.classList.toggle('on-results', showResults);
   if (!showResults) renderRecent();
