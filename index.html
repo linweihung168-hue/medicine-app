@@ -178,6 +178,11 @@
   .about-box a.contact-link .icon-badge { width: 32px; height: 32px; border-radius: 9px; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
   .about-box a.contact-link .icon-badge img { width: 100%; height: 100%; object-fit: cover; }
   .about-box a.contact-link .contact-text { flex: 1; }
+
+  .switch { position: relative; width: 51px; height: 31px; border-radius: 16px; background: #D1D5DB; flex-shrink: 0; transition: background .2s; }
+  .switch i { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 14px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .2s; }
+  .switch.on { background: var(--accent); }
+  .switch.on i { transform: translateX(20px); }
 </style>
 </head>
 <body>
@@ -223,8 +228,8 @@
 
   <div id="emptyState">
     <div class="chip-grid" id="chipGrid"></div>
-    <div class="sec-h"><span>最近查詢</span><button id="clearRecentBtn" aria-label="清除最近查詢">清除</button></div>
-    <div class="group" id="recentList"></div>
+<div id="recentWrap">    <div class="sec-h"><span>最近查詢</span><button id="clearRecentBtn" aria-label="清除最近查詢">清除</button></div>
+    <div class="group" id="recentList"></div></div>
   </div>
 
   <div id="resultsState" style="display:none; flex:1; flex-direction:column;">
@@ -280,6 +285,10 @@
   <div class="m-group" id="areaList"></div>
   <div class="m-sec">&nbsp;</div>
   <div class="m-group">
+    <button class="m-row" id="recentRow" role="switch"><span class="label">最近查詢</span><span class="switch" id="recentSwitch" aria-checked="true"><i></i></span></button>
+  </div>
+  <div class="m-sec" style="margin-top:8px">在首頁顯示最近查過的藥品。關閉後首頁不顯示,也不再記錄。</div>
+  <div class="m-group" style="margin-top:14px">
     <button class="m-row" id="versionInfoBtn"><span class="label">版本資訊</span><svg class="chev" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 7 7 1 13"/></svg></button>
     <button class="m-row" id="aboutBtn"><span class="label">關於</span><svg class="chev" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 7 7 1 13"/></svg></button>
   </div>
@@ -348,7 +357,15 @@ const RECENT_KEY = 'recent_codes';
 function getRecent() {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) { return []; }
 }
+function recentOn() { try { return localStorage.getItem('recent_on') !== '0'; } catch(e) { return true; } }
+function applyRecentSwitch() {
+  const on = recentOn();
+  document.getElementById('recentWrap').style.display = on ? '' : 'none';
+  const sw = document.getElementById('recentSwitch');
+  sw.classList.toggle('on', on); sw.setAttribute('aria-checked', on ? 'true' : 'false');
+}
 function addRecent(code) {
+  if (!recentOn()) return;
   try {
     let list = getRecent().filter(function(c){ return c !== code; });
     list.unshift(code);
@@ -1401,12 +1418,6 @@ document.getElementById('homeBtn').addEventListener('click', goHome);
 
 // ==================== 版本資訊(改版紀錄,手動維護) ====================
 const VERSION_HISTORY = [
-  { v: 'v2.0', items: [
-    '全新 iOS 風格介面:底部分頁(藥庫/掃碼語音/更多)',
-    '更名為「藥庫」',
-    '首頁大搜尋框與區域方塊',
-    '掃碼頁簡化,只留「開啟鏡頭」',
-  ]},
   { v: 'v1.3', items: [
     '新增語音查詢',
     '新增掃碼語音',
@@ -1712,6 +1723,13 @@ silentCheckAppUpdate(); // 打開 App 時悄悄檢查一次有沒有新版(有�
   }, { passive: true });
   document.addEventListener('touchcancel', function() { ok = false; }, { passive: true });
 })();
+
+document.getElementById('recentRow').addEventListener('click', function() {
+  try { localStorage.setItem('recent_on', recentOn() ? '0' : '1'); } catch(e) {}
+  applyRecentSwitch();
+  if (recentOn()) renderRecent();
+});
+applyRecentSwitch();
 
 </script>
 </body>
