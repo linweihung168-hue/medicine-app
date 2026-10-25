@@ -6,13 +6,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="藥庫">
-<meta name="theme-color" content="#F2F2F7">
+<meta name="theme-color" content="#EEF3F8">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="acorn-icon-192.png">
-<link rel="icon" href="round-192.png">
+<link rel="icon" href="acorn-icon-192.png">
 <title>藥庫</title>
 <style>
-  :root { --bg:#F2F2F7; --card:#fff; --label:#000; --sec:#3C3C4399; --sep:#3C3C4329; --blue:#2F7A57; --accent:#2F7A57; --accent-soft:#2F7A5718; --gray-btn:#E5E5EA; --red:#FF3B30; --green:#34C759; --fill:#7676801F; }
+  :root { --bg:#EEF3F8; --card:#fff; --label:#000; --sec:#3C3C4399; --sep:#3C3C4329; --blue:#2F7A57; --accent:#2F7A57; --accent-soft:#2F7A5718; --gray-btn:#E5E5EA; --red:#FF3B30; --green:#34C759; --fill:#7676801F; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { overflow-x: clip; width: 100%; overscroll-behavior-y: contain; }
   body { margin: 0; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang TC','Noto Sans CJK TC','Microsoft JhengHei',sans-serif; background: var(--bg); color: var(--label); overflow-x: clip; width: 100%; -webkit-font-smoothing: antialiased; }
@@ -60,11 +60,11 @@
   .voice-warn { color: var(--red); font-weight: 700; font-size: 14px; padding-top: 0; }
 
   #emptyState { display: flex; flex-direction: column; padding: 0 16px; }
-  .chip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .chip { background: #fff; border: none; border-radius: 14px; padding: 14px 16px; height: 80px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; text-align: left; color: var(--label); }
-  .chip:active { background: #E5E5EA; }
-  .chip b { font-size: 20px; font-weight: 600; }
-  .chip span { font-size: 15px; color: var(--sec); }
+  .chip-grid { display: flex; flex-direction: column; gap: 10px; }
+  .chip { position: relative; overflow: hidden; background: #fff; border: none; border-radius: 16px; padding: 0 20px; height: 72px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; text-align: left; color: var(--label); width: 100%; }
+  .chip::before { content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 4px; border-radius: 0 3px 3px 0; background: var(--c, var(--accent)); }
+  .chip:active { background: #E5E9EF; }
+  .chip b { font-size: 22px; font-weight: 600; }
   .sec-h { margin: 26px 4px 8px; font-size: 13px; color: var(--sec); display: flex; justify-content: space-between; align-items: center; }
   .sec-h button { background: none; border: none; padding: 4px; display: flex; color: var(--sec); font-size: 14px; }
   .group { background: #fff; border-radius: 14px; overflow: hidden; }
@@ -75,8 +75,8 @@
   .recent-empty { font-size: 14px; color: var(--sec); text-align: center; padding: 16px 0; }
   .mode-row { display: flex; justify-content: flex-end; padding: 0 16px 10px; margin-top: -6px; }
   .mode-row.on-results { display: none !important; }
-  .mode-pill { border: none; background: var(--accent-soft); color: var(--accent); border-radius: 14px; font-size: 13px; font-weight: 600; padding: 6px 14px; }
-  .mode-pill.ud { background: var(--blue); color: #fff; }
+  .mode-pill { border: none; background: #DCE4EE; color: #3C4A5E; border-radius: 14px; font-size: 13px; font-weight: 600; padding: 6px 14px; }
+  .mode-pill.ud { background: #3C4A5E; color: #fff; }
   .mic-btn { width: 38px; height: 38px; border-radius: 19px; border: none; background: transparent; display: none; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; margin-right: -8px; }
   .mic-btn.on { background: #FF3B3019; animation: micpulse 1.1s ease-in-out infinite; }
   .mic-btn.on svg { stroke: var(--red); }
@@ -286,7 +286,7 @@
 </div>
 
 <nav id="tabbar">
-  <button class="tab on" data-tab="homeScreen"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 19.5a1.5 1.5 0 0 1 0 0"/><path d="M3 7l2-3h14l2 3v2a3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1-3 3 3 3 0 0 1-3-3z"/><path d="M5 12v8h14v-8"/></svg>藥庫</button>
+  <button class="tab on" data-tab="homeScreen"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10.5v5"/><path d="M9.5 13h5"/></svg>藥庫</button>
   <button class="tab" data-tab="scanScreen"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3"/><path d="M16 4h3a1 1 0 0 1 1 1v3"/><path d="M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M8 20H5a1 1 0 0 1-1-1v-3"/><line x1="4" y1="12" x2="20" y2="12"/></svg>掃碼語音</button>
   <button class="tab" data-tab="moreScreen"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>更多<span class="tab-badge" id="moreBadge"></span></button>
 </nav>
@@ -694,7 +694,8 @@ function renderCats() {
     const n = rawData.filter(function(d){ return f.test(d) && !isDiscontinued(d); }).length;
     const btn = document.createElement('button');
     btn.className = 'chip';
-    btn.innerHTML = '<b>' + c.label + '</b><span>' + (n || '') + '</span>';
+    btn.style.setProperty('--c', ({'調劑檯':'#2F7A57','專調檯':'#2A8FA3','兒科檯':'#E39A2D','急診檯':'#D9534F'})[c.name] || '#2F7A57');
+    btn.innerHTML = '<b>' + c.label + '</b><svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 7 7 1 13"/></svg>';
     btn.addEventListener('click', function(){ setFilter(c.name); });
     grid.appendChild(btn);
   });
@@ -705,7 +706,7 @@ function renderCats() {
     const n = rawData.filter(function(d){ return f.test(d) && !isDiscontinued(d); }).length;
     const btn = document.createElement('button');
     btn.className = 'm-row';
-    btn.innerHTML = '<span class="label">' + f.name + '</span><span class="n">' + (n || '') + '</span><svg class="chev" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 7 7 1 13"/></svg>';
+    btn.innerHTML = '<span class="label">' + f.name + '</span><svg class="chev" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 7 7 1 13"/></svg>';
     btn.addEventListener('click', function(){ setFilter(f.name); });
     box.appendChild(btn);
   });
@@ -1400,6 +1401,12 @@ document.getElementById('homeBtn').addEventListener('click', goHome);
 
 // ==================== 版本資訊(改版紀錄,手動維護) ====================
 const VERSION_HISTORY = [
+  { v: 'v2.0', items: [
+    '全新 iOS 風格介面:底部分頁(藥庫/掃碼語音/更多)',
+    '更名為「藥庫」',
+    '首頁大搜尋框與區域方塊',
+    '掃碼頁簡化,只留「開啟鏡頭」',
+  ]},
   { v: 'v1.3', items: [
     '新增語音查詢',
     '新增掃碼語音',
