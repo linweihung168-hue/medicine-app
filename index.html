@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#F2F2F7">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="acorn-icon-192.png">
-<link rel="icon" href="acorn-icon-192.png">
+<link rel="icon" href="round-192.png">
 <title>藥庫</title>
 <style>
   :root { --bg:#F2F2F7; --card:#fff; --label:#000; --sec:#3C3C4399; --sep:#3C3C4329; --blue:#2F7A57; --accent:#2F7A57; --accent-soft:#2F7A5718; --gray-btn:#E5E5EA; --red:#FF3B30; --green:#34C759; --fill:#7676801F; }
@@ -1684,6 +1684,33 @@ showScreen('homeScreen');
 updateHomeView();
 fetchData();
 silentCheckAppUpdate(); // 打開 App 時悄悄檢查一次有沒有新版(有的話只亮紅點)
+
+
+// ==================== 手勢:從左緣向右滑 = 返回上一頁 ====================
+(function() {
+  let sx = 0, sy = 0, ok = false, t0 = 0;
+  document.addEventListener('touchstart', function(e) {
+    const t = e.touches[0];
+    ok = e.touches.length === 1 && t.clientX < 28;
+    sx = t.clientX; sy = t.clientY; t0 = Date.now();
+  }, { passive: true });
+  document.addEventListener('touchend', function(e) {
+    if (!ok) return; ok = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+    if (dx < 70 || dx < dy * 1.5 || Date.now() - t0 > 700) return;
+    if (document.getElementById('versionModal').style.display === 'flex') { document.getElementById('versionModalClose').click(); return; }
+    if (document.getElementById('aboutModal').style.display === 'flex') { document.getElementById('aboutModalClose').click(); return; }
+    if (curScreen === 'detailScreen') {
+      if (editing) { editing = false; renderDetail(); return; }
+      document.getElementById('backBtn').click();
+    } else if (curScreen === 'homeScreen') {
+      const hb = document.getElementById('homeBtn');
+      if (getComputedStyle(hb).display !== 'none') hb.click();
+    }
+  }, { passive: true });
+  document.addEventListener('touchcancel', function() { ok = false; }, { passive: true });
+})();
 
 </script>
 </body>

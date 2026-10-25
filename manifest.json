@@ -9,9 +9,29 @@
   "theme_color": "#F2F2F7",
   "orientation": "portrait",
   "icons": [
-    { "src": "acorn-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "acorn-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "acorn-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "acorn-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "round-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "round-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "acorn-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "acorn-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
