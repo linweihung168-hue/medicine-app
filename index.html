@@ -15,7 +15,7 @@
   :root { --bg:#EEF3F8; --card:#fff; --label:#000; --sec:#3C3C4399; --sep:#3C3C4329; --blue:#2F7A57; --accent:#2F7A57; --accent-soft:#2F7A5718; --gray-btn:#E5E5EA; --red:#FF3B30; --green:#34C759; --fill:#7676801F; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { overflow-x: clip; width: 100%; overscroll-behavior-y: contain; }
-  body { margin: 0; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang TC','Noto Sans CJK TC','Microsoft JhengHei',sans-serif; background: var(--bg); color: var(--label); overflow-x: clip; width: 100%; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; font-family: 'Segoe UI',-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang TC','Microsoft JhengHei UI','Microsoft JhengHei','Noto Sans TC','Noto Sans CJK TC',sans-serif; text-rendering: optimizeLegibility; background: var(--bg); color: var(--label); overflow-x: clip; width: 100%; -webkit-font-smoothing: antialiased; }
   .screen { min-height: 100vh; min-height: 100dvh; display: none; flex-direction: column; padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
   .screen.active { display: flex; }
   body.no-tabs .screen { padding-bottom: env(safe-area-inset-bottom); }
@@ -189,6 +189,15 @@
 
   h1.large.area { padding: calc(30px + env(safe-area-inset-top)) 20px 14px; line-height: 0; }
   .areabar { display: inline-block; width: 48px; height: 6px; border-radius: 3px; }
+
+  /* 電腦大螢幕:內容置中、限制寬度,不要整個拉到最寬 */
+  .screen { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
+  #tabbar { left: max(20px, calc(50% - 250px)); right: max(20px, calc(50% - 250px)); }
+  @media (min-width: 700px) {
+    body { background: #E4EBF2; }
+    .screen { background: var(--bg); box-shadow: 0 0 0 .5px #3C3C4322; }
+    #detailScreen { background: var(--bg); }
+  }
 </style>
 </head>
 <body>
@@ -341,7 +350,7 @@ function updateHomeView() {
   document.getElementById('homeBtn').style.display = showResults ? 'flex' : 'none';
   document.getElementById('topbar').classList.toggle('in-results', hasQuery);
   const bt = document.getElementById('bigTitle');
-  const AREA_COLOR = { '調劑檯':'#2F7A57', '專調檯':'#2A8FA3', '兒科檯':'#E39A2D', '急診檯':'#D9534F', '覆核發藥檯':'#7A6FB0', '諮詢檯':'#8E8E93', '冰箱藥品':'#4C8FD6' };
+  const AREA_COLOR = { '調劑檯':'#E0483E', '專調檯':'#EBB426', '兒科檯':'#3B82D6', '急診檯':'#38A869', '覆核發藥檯':'#7A6FB0', '諮詢檯':'#8E8E93', '冰箱藥品':'#4C8FD6' };
   if (activeFilter && !hasQuery) {
     bt.classList.remove('logo'); bt.classList.add('area');
     bt.innerHTML = '<span class="areabar" style="background:' + (AREA_COLOR[activeFilter] || '#2F7A57') + '"></span>';
@@ -723,7 +732,7 @@ function renderCats() {
     const n = rawData.filter(function(d){ return f.test(d) && !isDiscontinued(d); }).length;
     const btn = document.createElement('button');
     btn.className = 'chip';
-    btn.style.setProperty('--c', ({'調劑檯':'#2F7A57','專調檯':'#2A8FA3','兒科檯':'#E39A2D','急診檯':'#D9534F'})[c.name] || '#2F7A57');
+    btn.style.setProperty('--c', ({'調劑檯':'#E0483E','專調檯':'#EBB426','兒科檯':'#3B82D6','急診檯':'#38A869'})[c.name] || '#2F7A57');
     btn.innerHTML = '<b>' + c.label + '</b><svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 7 7 1 13"/></svg>';
     btn.addEventListener('click', function(){ setFilter(c.name); });
     grid.appendChild(btn);
