@@ -198,6 +198,7 @@
     .screen { background: var(--bg); box-shadow: 0 0 0 .5px #3C3C4322; }
     #detailScreen { background: var(--bg); }
   }
+  .v-sub { margin: -8px 0 14px; font-size: 13px; color: var(--sec); }
 </style>
 </head>
 <body>
@@ -206,13 +207,13 @@
 
 <div id="versionModal"><div class="version-box">
   <p class="v-title">版本資訊</p>
+  <p class="v-sub" id="verBuild"></p>
   <div id="versionList"></div>
   <button class="v-close" id="versionModalClose">關閉</button>
 </div></div>
 
 <div id="aboutModal"><div class="about-box">
   <p class="a-title">關於</p>
-  <div class="sync-badge" id="syncBadge"></div>
   <h4>來源</h4>
   <p>HIS 出入庫系統匯出,由人工同步。無法即時反映 HIS 最新異動,更新時間視匯入頻率而定,可能與正式系統有落差。</p>
   <h4>使用限制</h4>
@@ -451,7 +452,11 @@ function getUpdateCount() {
 function renderUpdateBadge() {
   const n = getUpdateCount();
   const bt = document.getElementById('buildTxt');
-  if (bt) bt.textContent = pendingBuild ? '有新版 ' + pendingBuild : '版本 ' + APP_BUILD;
+  if (bt) {
+    let ds = '';
+    if (lastMergeTime) { const d = new Date(lastMergeTime); if (!isNaN(d.getTime())) ds = (d.getMonth() + 1) + '/' + d.getDate(); }
+    bt.textContent = pendingBuild ? '有新版程式' : (ds ? '資料 ' + ds : '');
+  }
   [document.getElementById('moreBadge'), document.getElementById('rowBadge')].forEach(function(el){
     if (!el) return;
     if (n > 0) { el.style.display = 'flex'; el.textContent = String(n); }
@@ -1487,6 +1492,7 @@ function renderVersionList() {
 }
 document.getElementById('versionInfoBtn').addEventListener('click', function(){
   renderVersionList();
+  document.getElementById('verBuild').textContent = '目前程式版本 ' + APP_BUILD + (pendingBuild ? '(有新版 ' + pendingBuild + ')' : '');
   document.getElementById('versionModal').style.display = 'flex';
   closeDrawer();
 });
@@ -1505,7 +1511,6 @@ function formatSyncDate() {
 }
 
 document.getElementById('aboutBtn').addEventListener('click', function(){
-  document.getElementById('syncBadge').textContent = formatSyncDate();
   document.getElementById('aboutModal').style.display = 'flex';
   closeDrawer();
 });
