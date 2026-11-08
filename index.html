@@ -320,7 +320,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-10-24b'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-11-08a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -379,7 +379,7 @@ const RECENT_KEY = 'recent_codes';
 function getRecent() {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) { return []; }
 }
-function recentOn() { try { return localStorage.getItem('recent_on') !== '0'; } catch(e) { return true; } }
+function recentOn() { try { return localStorage.getItem('recent_on') === '1'; } catch(e) { return false; } } // 預設關閉:瀏覽器資料被清除後不會又自己打開
 function applyRecentSwitch() {
   const on = recentOn();
   document.getElementById('recentWrap').style.display = on ? '' : 'none';
@@ -442,10 +442,17 @@ function getUpdateCount() {
   let count = 0;
   if (pendingBuild) count++;
   else try {
-    if (localStorage.getItem(SEEN_BUILD_KEY) !== APP_BUILD) count++;
+    // 瀏覽器資料被清除後(沒有「已看過」的記錄),當作剛安裝:靜靜記下目前版本,不亮紅點
+    const sb = localStorage.getItem(SEEN_BUILD_KEY);
+    if (sb === null) localStorage.setItem(SEEN_BUILD_KEY, APP_BUILD);
+    else if (sb !== APP_BUILD) count++;
   } catch(e) {}
   try {
-    if (lastMergeTime && localStorage.getItem(SEEN_MERGE_KEY) !== lastMergeTime) count++;
+    if (lastMergeTime) {
+      const sm = localStorage.getItem(SEEN_MERGE_KEY);
+      if (sm === null) localStorage.setItem(SEEN_MERGE_KEY, lastMergeTime);
+      else if (sm !== lastMergeTime) count++;
+    }
   } catch(e) {}
   return count;
 }
@@ -471,6 +478,7 @@ function markUpdatesSeen() {
   renderUpdateBadge();
 }
 renderUpdateBadge();
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {} // 請瀏覽器盡量保留這個 App 的設定
 
 // ==================== 畫面切換 / 錯誤提示 / 登入 ====================
 let curScreen = 'homeScreen';
