@@ -324,7 +324,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-11-12a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-11-12b'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -540,6 +540,18 @@ async function fetchData() {
   clearTimeout(statusHideTimer);
   statusBarEl.classList.remove('faded');
   statusEl.textContent = '更新中…';
+  // 先用手機上次存的資料立刻顯示(不用等 3~4 秒),網路上的最新資料回來後再自動換上
+  if (!rawData.length) {
+    try {
+      const c = localStorage.getItem('med_data_cache');
+      if (c) {
+        rawData = JSON.parse(c);
+        lastMergeTime = localStorage.getItem('last_merge_time_cache') || '';
+        statusEl.textContent = '更新中…(先顯示上次的資料)';
+        renderCats(); renderList(); updateHomeView(); renderUpdateBadge();
+      }
+    } catch(e) { rawData = []; }
+  }
   let success = false;
   try {
     const res = await fetch(API_URL, { cache: 'no-store' });
