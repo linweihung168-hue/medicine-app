@@ -305,6 +305,10 @@
   </div>
   <div class="m-sec" style="margin-top:8px">在首頁顯示最近查過的藥品。關閉後首頁不顯示,也不再記錄。</div>
   <div class="m-group" style="margin-top:14px">
+    <button class="m-row" id="keepRow" role="switch"><span class="label">螢幕恆亮</span><span class="switch" id="keepSwitch" aria-checked="true"><i></i></span></button>
+  </div>
+  <div class="m-sec" style="margin-top:8px" id="keepNote">開著 App 時螢幕不會自己熄掉。超過 3 小時沒有操作會自動放掉,切到別的程式或鎖屏也會放掉。</div>
+  <div class="m-group" style="margin-top:14px">
     <button class="m-row" id="versionInfoBtn"><span class="label">版本資訊</span><svg class="chev" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 7 7 1 13"/></svg></button>
     <button class="m-row" id="aboutBtn"><span class="label">關於</span><svg class="chev" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#C7C7CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 7 7 1 13"/></svg></button>
   </div>
@@ -320,7 +324,7 @@
 <script>
 // ==================== 全域設定與狀態 ====================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr7DIlHyO81RHvCX5WKbbs0Rj3q4BziyNQBOvqYnlFg8aGXfIvrAgPbgB_rNC30lqhIw/exec';
-const APP_BUILD = '2026-11-08a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
+const APP_BUILD = '2026-11-12a'; // 每次改完程式碼就手動改這串,用來讓「更新」徽章知道程式碼換過了
 
 let rawData = [];
 let activeFilter = null;
@@ -1362,7 +1366,7 @@ document.getElementById('homeBtn').addEventListener('click', goHome);
     }
 
     voiceWarn = '';
-    voiceHits = hits; voiceMsg = msg;
+    voiceHits = hits; voiceMsg = msg; try { markActive(); } catch (e) {}
     searchEl.value = heard;
     renderList(); updateHomeView(); window.scrollTo({ top: 0 });
 
@@ -1764,6 +1768,43 @@ document.getElementById('recentRow').addEventListener('click', function() {
   if (recentOn()) renderRecent();
 });
 applyRecentSwitch();
+
+// ==================== 整個 App 螢幕恆亮 ====================
+// 預設開啟(清除瀏覽器資料後也是開);超過 KEEP_AWAKE_MS 沒操作就放掉,一碰螢幕又自動恢復。
+const KEEP_AWAKE_MS = 3 * 60 * 60 * 1000;
+function keepAwakeOn() { try { return localStorage.getItem('keep_awake') !== '0'; } catch(e) { return true; } }
+let appWake = null, lastActive = Date.now(), keepMsg = '';
+async function acquireAppWake() {
+  if (!keepAwakeOn() || appWake || document.visibilityState !== 'visible') return;
+  if (Date.now() - lastActive > KEEP_AWAKE_MS) return; // 閒置太久:先不要亮,等下一次操作
+  if (!('wakeLock' in navigator)) { keepMsg = '這支手機不支援恆亮,請把螢幕逾時調長。'; renderKeepSwitch(); return; }
+  try {
+    const wl = await navigator.wakeLock.request('screen');
+    appWake = wl; wl.addEventListener('release', function(){ if (appWake === wl) appWake = null; });
+  } catch (e) { appWake = null; }
+}
+function releaseAppWake() { try { if (appWake) appWake.release(); } catch(e) {} appWake = null; }
+function markActive() {
+  lastActive = Date.now();
+  if (!appWake) acquireAppWake(); // 閒置放掉之後,一碰螢幕就恢復
+}
+['pointerdown', 'keydown', 'touchstart', 'input'].forEach(function(ev){ document.addEventListener(ev, markActive, { passive: true, capture: true }); });
+setInterval(function() { if (appWake && Date.now() - lastActive > KEEP_AWAKE_MS) releaseAppWake(); }, 60000);
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') acquireAppWake(); else releaseAppWake();
+});
+function renderKeepSwitch() {
+  const on = keepAwakeOn(), sw = document.getElementById('keepSwitch');
+  sw.classList.toggle('on', on); sw.setAttribute('aria-checked', on ? 'true' : 'false');
+  document.getElementById('keepNote').textContent = (keepMsg && on) ? keepMsg : '開著 App 時螢幕不會自己熄掉。超過 3 小時沒有操作會自動放掉,切到別的程式或鎖屏也會放掉。';
+}
+document.getElementById('keepRow').addEventListener('click', function() {
+  try { localStorage.setItem('keep_awake', keepAwakeOn() ? '0' : '1'); } catch(e) {}
+  if (keepAwakeOn()) { lastActive = Date.now(); acquireAppWake(); } else releaseAppWake();
+  renderKeepSwitch();
+});
+renderKeepSwitch();
+acquireAppWake();
 
 </script>
 </body>
